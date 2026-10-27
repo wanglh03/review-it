@@ -44,6 +44,8 @@ node scripts/smoke-api.mjs
 
 ## 部署
 
+线上地址：**https://review.gtbro.vip** （备用：https://review-it-cy0.pages.dev）
+
 ```bash
 # 1. 登录 Cloudflare
 npx wrangler login
@@ -56,6 +58,19 @@ node scripts/put-secrets.mjs review-it
 
 # 4. 构建并发布
 npm run deploy
+```
+
+推送到 `main` 后由 GitHub Actions 自动部署，需要在仓库 Secrets 里配置
+`CLOUDFLARE_API_TOKEN`（Account → Cloudflare Pages: Edit）和 `CLOUDFLARE_ACCOUNT_ID`：
+
+```bash
+$env:GH_TOKEN="..."; $env:CF_API_TOKEN="..."; node scripts/set-gh-secrets.mjs
+```
+
+自定义域名（`review.gtbro.vip`）需要一条显式 CNAME，否则会被 `*.gtbro.vip` 通配记录接管：
+
+```bash
+$env:CF_API_TOKEN="..."; node scripts/setup-domain.mjs review.gtbro.vip review-it-cy0.pages.dev
 ```
 
 `wrangler.toml` 里已经声明了 R2 绑定：
