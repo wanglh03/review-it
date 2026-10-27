@@ -23,11 +23,16 @@ if (!existsSync(secretsPath)) {
 }
 
 const secrets = JSON.parse(readFileSync(secretsPath, 'utf8'))
-const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx'
+// 直接调用本地安装的 wrangler 入口，避免 Windows 上 spawn npx.cmd 的 EINVAL
+const wranglerBin = join(root, 'node_modules', 'wrangler', 'bin', 'wrangler.js')
+if (!existsSync(wranglerBin)) {
+  console.error('找不到本地 wrangler，请先 npm install')
+  process.exit(1)
+}
 
 for (const [name, value] of Object.entries(secrets)) {
   process.stdout.write(`写入 ${name} … `)
-  execFileSync(npx, ['wrangler', 'pages', 'secret', 'put', name, '--project-name', project], {
+  execFileSync(process.execPath, [wranglerBin, 'pages', 'secret', 'put', name, '--project-name', project], {
     cwd: root,
     input: `${value}\n`,
     stdio: ['pipe', 'ignore', 'inherit'],
