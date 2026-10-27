@@ -1,0 +1,38 @@
+{
+  "name": "review-it",
+  "private": true,
+  "version": "1.0.0",
+  "description": "我们的测评！——美食、景点、酒店的探店时间轴",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "pages:dev": "wrangler pages dev dist --port 8788",
+    "deploy": "vite build && wrangler pages deploy dist --project-name review-it --branch main"
+  },
+  "keywords": [
+    "review",
+    "timeline",
+    "cloudflare-pages"
+  ],
+  "author": "wanglh03",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dompurify": "^3.4.17",
+    "lucide-react": "^1.62.0",
+    "marked": "^18.1.2",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-react": "^6.1.2",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.3.5",
+    "wrangler": "^4.152.0"
+  }
+}

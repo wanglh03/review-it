@@ -1,0 +1,259 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-cream: #fff9f4;
+  --color-paper: #fffdfa;
+  --color-ink: #3f2e2c;
+  --color-muted: #8d7a73;
+  --color-coral: #f9735b;
+  --color-coral-deep: #e4573f;
+  --color-peach: #ffe4d5;
+  --color-rose: #ffc9d2;
+  --color-sage: #a7c8b7;
+  --color-butter: #ffe9a8;
+  --color-line: #f0e2d8;
+
+  --font-sans:
+    'PingFang SC', 'HarmonyOS Sans SC', 'MiSans', 'Noto Sans SC', 'Microsoft YaHei', ui-sans-serif,
+    system-ui, sans-serif;
+
+  --radius-4xl: 2rem;
+  --radius-5xl: 2.5rem;
+
+  --shadow-soft: 0 18px 44px -24px rgba(150, 96, 70, 0.45);
+  --shadow-card:
+    0 2px 4px rgba(150, 96, 70, 0.03), 0 16px 36px -24px rgba(150, 96, 70, 0.4);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    scroll-behavior: smooth;
+    touch-action: manipulation;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
+  body {
+    @apply bg-cream text-ink font-sans antialiased;
+    background-image:
+      radial-gradient(60rem 40rem at 112% -8%, rgba(255, 201, 210, 0.38), transparent 60%),
+      radial-gradient(48rem 32rem at -12% 6%, rgba(255, 233, 168, 0.4), transparent 55%),
+      radial-gradient(46rem 34rem at 52% 118%, rgba(167, 200, 183, 0.24), transparent 62%);
+    background-attachment: fixed;
+    overscroll-behavior-y: none;
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  ::selection {
+    background: var(--color-peach);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-coral);
+    outline-offset: 2px;
+  }
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ---------- Markdown 正文 ---------- */
+.md {
+  line-height: 1.85;
+  font-size: 0.95rem;
+  color: #4b3835;
+  overflow-wrap: anywhere;
+}
+.md > * + * {
+  margin-top: 0.72em;
+}
+.md h1,
+.md h2,
+.md h3,
+.md h4 {
+  font-weight: 800;
+  line-height: 1.35;
+  color: var(--color-ink);
+}
+.md h1 {
+  font-size: 1.45em;
+}
+.md h2 {
+  font-size: 1.2em;
+}
+.md h3 {
+  font-size: 1.05em;
+}
+.md strong {
+  font-weight: 700;
+  color: var(--color-ink);
+}
+.md a {
+  color: var(--color-coral-deep);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1.5px;
+}
+.md img {
+  max-width: 100%;
+  border-radius: 1rem;
+  margin: 0.4em 0;
+}
+.md blockquote {
+  border-left: 3px solid var(--color-peach);
+  padding-left: 0.9em;
+  color: #7b6660;
+  font-style: italic;
+}
+.md code {
+  background: #f7ece3;
+  padding: 0.15em 0.42em;
+  border-radius: 0.45em;
+  font-size: 0.85em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.md pre {
+  background: #3f2e2c;
+  color: #fff8f2;
+  padding: 1em 1.1em;
+  border-radius: 1rem;
+  overflow-x: auto;
+  font-size: 0.85em;
+}
+.md pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+}
+.md ul {
+  list-style: disc;
+  padding-left: 1.35em;
+}
+.md ol {
+  list-style: decimal;
+  padding-left: 1.35em;
+}
+.md li + li {
+  margin-top: 0.2em;
+}
+.md hr {
+  border: 0;
+  border-top: 1px dashed var(--color-line);
+  margin: 1.1em 0;
+}
+.md table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+.md th,
+.md td {
+  border: 1px solid var(--color-line);
+  padding: 0.45em 0.7em;
+  text-align: left;
+}
+.md th {
+  background: #fff5ec;
+}
+.md del {
+  color: var(--color-muted);
+}
+
+/* ---------- 动画 ---------- */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.94) translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+@keyframes floaty {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(2deg);
+  }
+}
+@keyframes pulseDot {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 91, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(249, 115, 91, 0);
+  }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animate-fade-in {
+  animation: fadeIn 0.25s ease both;
+}
+.animate-pop {
+  animation: popIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animate-floaty {
+  animation: floaty 4s ease-in-out infinite;
+}
+.animate-pulse-dot {
+  animation: pulseDot 2.4s ease-out infinite;
+}
+
+/* 手机端底部安全区 */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* 输入框日期图标配色 */
+input[type='date']::-webkit-calendar-picker-indicator {
+  opacity: 0.55;
+  cursor: pointer;
+}

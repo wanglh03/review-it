@@ -1,0 +1,8 @@
+name = "review-it"
+compatibility_date = "2026-10-01"
+pages_build_output_dir = "dist"
+
+# 图片与记录数据都存放在 R2 存储桶 review-it 中
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "review-it"
