@@ -70,8 +70,18 @@ export function normalizeData(raw) {
                 name: String(entry.location.name || '').slice(0, 60),
                 address: String(entry.location.address || '').slice(0, 160),
                 mapUrl: String(entry.location.mapUrl || '').slice(0, 500),
+                lat:
+                  Number.isFinite(Number(entry.location.lat)) &&
+                  Math.abs(Number(entry.location.lat)) <= 90
+                    ? Number(entry.location.lat)
+                    : null,
+                lng:
+                  Number.isFinite(Number(entry.location.lng)) &&
+                  Math.abs(Number(entry.location.lng)) <= 180
+                    ? Number(entry.location.lng)
+                    : null,
               }
-            : { name: '', address: '', mapUrl: '' },
+            : { name: '', address: '', mapUrl: '', lat: null, lng: null },
         createdAt: entry.createdAt || new Date().toISOString(),
         updatedAt: entry.updatedAt || entry.createdAt || new Date().toISOString(),
       }))

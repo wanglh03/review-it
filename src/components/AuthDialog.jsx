@@ -68,7 +68,7 @@ export default function AuthDialog({ open, scope, onClose, onVerify }) {
         </div>
 
         {error && (
-          <p className="rounded-2xl bg-rose/30 px-3.5 py-2.5 text-xs font-semibold text-[#a53f35]">
+          <p className="rounded-2xl bg-rose/30 px-3.5 py-2.5 text-sm font-semibold text-[#a53f35]">
             {error}
           </p>
         )}
@@ -76,22 +76,22 @@ export default function AuthDialog({ open, scope, onClose, onVerify }) {
         <button
           type="submit"
           disabled={busy || !secret.trim()}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-coral px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-coral/30 transition hover:bg-coral-deep disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-coral px-4 py-3.5 text-base font-bold text-white shadow-lg shadow-coral/30 transition hover:bg-coral-deep disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy ? (
             <>
-              <Loader2 size={17} className="animate-spin" />
+              <Loader2 size={18} className="animate-spin" />
               正在验证…
             </>
           ) : (
             <>
-              <Lock size={16} />
+              <Lock size={17} />
               解锁
             </>
           )}
         </button>
 
-        <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-muted">
+        <p className="flex items-start gap-1.5 text-xs leading-relaxed text-muted">
           <span className="mt-0.5 shrink-0">🔒</span>
           码只会在你的设备上经过 PBKDF2 加密后再发送，服务端保存的是不可逆摘要，不会明文保存或下发。
         </p>

@@ -1,19 +1,13 @@
 /**
- * 把 .secrets.json 里的 5 个变量推送到 Cloudflare Pages 项目（加密存储）。
+ * 把 .secrets.json 里的 5 个变量推送到 Cloudflare Worker（加密存储为 Secret）。
  *
- * 用法：node scripts/put-secrets.mjs <pages 项目名>
- * 依赖：本机已 `npx wrangler login`
+ * 用法：node scripts/put-secrets.mjs
+ * 依赖：本机已 `npx wrangler login`，且 Worker 已经至少部署过一次
  */
 import { execFileSync } from 'node:child_process'
 import { readFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-
-const project = process.argv[2]
-if (!project) {
-  console.error('用法: node scripts/put-secrets.mjs <pages 项目名>')
-  process.exit(1)
-}
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const secretsPath = join(root, '.secrets.json')
@@ -32,7 +26,7 @@ if (!existsSync(wranglerBin)) {
 
 for (const [name, value] of Object.entries(secrets)) {
   process.stdout.write(`写入 ${name} … `)
-  execFileSync(process.execPath, [wranglerBin, 'pages', 'secret', 'put', name, '--project-name', project], {
+  execFileSync(process.execPath, [wranglerBin, 'secret', 'put', name], {
     cwd: root,
     input: `${value}\n`,
     stdio: ['pipe', 'ignore', 'inherit'],
@@ -40,4 +34,4 @@ for (const [name, value] of Object.entries(secrets)) {
   console.log('ok')
 }
 
-console.log('\n全部密钥已写入 Cloudflare Pages 项目:', project)
+console.log('\n全部密钥已写入 Cloudflare Worker: review-it')

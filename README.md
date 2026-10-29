@@ -1,42 +1,64 @@
 # 我们的测评！
 
-一个用来记录「探店测评」的时间轴小站：美食、景点、酒店……按日期排好，配图和文字一起收进来。
+记录「探店测评」的时间轴小站：美食、景点、酒店……按日期排好，配图、地点和文字一起收进来。
 
 - 前端：Vite + React 19 + Tailwind CSS 4
-- 后端：Cloudflare Pages Functions（`functions/` 目录）
+- 后端：Cloudflare **Worker**（`worker/`）+ Workers Static Assets
 - 存储：Cloudflare R2 存储桶 `review-it`（记录 JSON + 原图）
+- 地图：Leaflet + 高德瓦片（无需 Key），坐标统一存 WGS-84，展示时转 GCJ-02
+
+线上地址：**https://review.gtbro.vip**
 
 ## 功能
 
-- **时间轴**：左侧一长条时间轴，日期最新的置顶；每条记录包含日期、标题、Markdown 正文、照片、标签、地点与地址。
+- **时间轴**：左侧一条长的时间轴，最新的日期置顶；每条记录包含日期、标题、Markdown 正文、照片、标签、地点与地址。
 - **地址锚点**：滚动时地址栏实时变成 `#26-10-27`；把这个链接发给对方，打开就会定位到那一天。
-- **相册**：切换成只看图片的瀑布流，点开任意照片会显示当天整篇记录，并可一键跳回时间轴。
-- **可爱风日历**：有记录的日子是珊瑚色圆点，点一下就跳转；没有记录的日期是灰色且不可点；月份翻页最远只到第一篇记录的月份。
-- **添加记录**：选日期、写 Markdown（带工具栏与预览）、传照片（浏览器端自动压缩）、选标签（可多选）、填地点与地址；需要输入 **PIN 码**。
-- **修改 / 删除**：每条记录右上角的编辑、删除按钮，需要输入 **编辑密码**。
-- **标签维护**：改名、换 emoji、增删标签；删除标签会同步从记录上移除。
-- **手机适配**：移动端底部抽屉式弹窗、安全区适配、禁止双指/双击缩放。
+- **相册**：只看图片的瀑布流，点开照片能看到当天整篇记录，并可一键跳回时间轴。
+- **大地图**：把所有记录过的地点标在同一张地图上，点标记看当天记录。
+- **地图选点**：添加 / 编辑记录时，直接在地图上点击或拖动标记来选位置，也可以「定位到我」。
+- **可爱风日历**：有记录的日子是珊瑚色圆点，点一下跳转；没记录的日期灰色且不可点；翻页最远只到第一篇记录的月份。
+- **添加记录**：选日期、写 Markdown（工具栏 + 预览）、传照片（浏览器端自动压缩）、选标签、地图选点；需要 **PIN 码**。
+- **修改 / 删除**：每条记录右上角，需要 **编辑密码**。
+- **标签维护**：改名、换 emoji、增删；删除标签会同步从记录上移除。
+- **手机适配**：底部抽屉弹窗、安全区适配、禁止双指 / 双击缩放。
 
 ## 安全设计
 
-PIN 码与编辑密码都不以明文形式经网络传输或存储：
+PIN 码与编辑密码都不以明文经网络传输或存储：
 
-1. 前端用 `PBKDF2-SHA256`（210000 次迭代 + 服务端下发的盐）派生出 `proof`，密码本身不离开设备；
-2. 服务端只保存 `HMAC-SHA256(AUTH_PEPPER, proof)` 摘要，用恒定时间比较；
-3. 校验通过后签发 2 小时有效的 HMAC 令牌（`add` / `edit` 两种 scope），放在 `Authorization: Bearer` 头里，不用 Cookie，天然免疫 CSRF；
-4. 失败次数按 IP + scope 限流（10 分钟 6 次），并附加固定延迟；
-5. 上传接口会校验文件头魔数与声明类型是否一致，图片 key 也做了白名单格式校验。
+1. 前端用 `PBKDF2-SHA256`（210000 次迭代 + 服务端下发的盐）派生 `proof`，密码本身不离开设备；
+2. 服务端只保存 `HMAC-SHA256(AUTH_PEPPER, proof)` 摘要，恒定时间比较；
+3. 校验通过后签发 2 小时有效的 HMAC 令牌（`add` / `edit` 两种 scope），放在 `Authorization: Bearer` 头里，天然免疫 CSRF；
+4. 登录失败按 IP + scope 限流（10 分钟 6 次）并附加固定延迟；
+5. 上传校验文件头魔数与声明类型，图片 key 走白名单格式校验。
+
+## 目录结构
+
+```
+worker/
+  index.js          # Worker 入口：/api/* 走后端，其余交给静态资源
+  api.js            # 所有 API 路由
+  lib/auth.js       # PBKDF2 / HMAC / 令牌 / 限流
+  lib/store.js      # R2 读写与数据规范化
+src/
+  App.jsx           # 页面状态、滚动定位、弹窗编排
+  components/       # 时间轴、日历、相册、地图、编辑器等
+  lib/              # 日期、Markdown、坐标转换、Leaflet 封装
+public/_headers     # CSP 等安全响应头
+wrangler.toml       # Worker + 静态资源 + R2 + 自定义域名
+```
 
 ## 本地开发
 
 ```bash
 npm install
-node scripts/generate-secrets.mjs <你的PIN或密码>   # 生成 .dev.vars（含盐、pepper、摘要）
-npx wrangler pages dev dist --port 8788            # 本地跑 Pages + Functions
-npm run dev                                        # 另开一个终端跑 Vite（/api 代理到 8788）
+node scripts/generate-secrets.mjs <PIN>   # 生成 .dev.vars（盐 / pepper / 摘要）
+npm run build                            # 先产出 dist，Worker 才能服务静态资源
+npm run dev:worker                       # 8788：Worker + 本地 R2
+npm run dev                              # 5173：Vite，/api 代理到 8788
 ```
 
-本地接口冒烟测试（18 项断言）：
+接口冒烟测试（19 项断言）：
 
 ```bash
 node scripts/smoke-api.mjs
@@ -44,54 +66,54 @@ node scripts/smoke-api.mjs
 
 ## 部署
 
-线上地址：**https://review.gtbro.vip** （备用：https://review-it-cy0.pages.dev）
-
 ```bash
-# 1. 登录 Cloudflare
 npx wrangler login
-
-# 2. 首次创建 Pages 项目（之后只需 deploy）
-npx wrangler pages project create review-it --production-branch main
-
-# 3. 写入 5 个密钥（值在 .secrets.json 里，脚本已生成）
-node scripts/put-secrets.mjs review-it
-
-# 4. 构建并发布
-npm run deploy
+npm run deploy                 # 构建并部署 Worker（含自定义域名 / R2 绑定）
+node scripts/put-secrets.mjs   # 首次部署后写入 5 个 Secret
 ```
 
-推送到 `main` 后由 GitHub Actions 自动部署，需要在仓库 Secrets 里配置
-`CLOUDFLARE_API_TOKEN`（Account → Cloudflare Pages: Edit）和 `CLOUDFLARE_ACCOUNT_ID`：
+`wrangler.toml` 已声明：
+
+```toml
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "review-it"
+
+[[routes]]
+pattern = "review.gtbro.vip"
+custom_domain = true
+```
+
+### 自动部署（GitHub Actions）
+
+`.github/workflows/deploy.yml` 会在 push 到 `main` 时构建并部署。需要在仓库
+**Settings → Secrets and variables → Actions** 里加两个 Secret：
+
+| Secret | 说明 |
+| --- | --- |
+| `CLOUDFLARE_API_TOKEN` | API Token，权限：Account → Workers Scripts: Edit、Workers Routes: Edit；Zone → DNS: Edit（自定义域名需要） |
+| `CLOUDFLARE_ACCOUNT_ID` | `b8d89f47a5e4867bef49cd1c51265dd3` |
+
+也可以用脚本写入（需要 GitHub token）：
 
 ```bash
 $env:GH_TOKEN="..."; $env:CF_API_TOKEN="..."; node scripts/set-gh-secrets.mjs
 ```
 
-自定义域名（`review.gtbro.vip`）需要一条显式 CNAME，否则会被 `*.gtbro.vip` 通配记录接管：
-
-```bash
-$env:CF_API_TOKEN="..."; node scripts/setup-domain.mjs review.gtbro.vip review-it-cy0.pages.dev
-```
-
-`wrangler.toml` 里已经声明了 R2 绑定：
-
-```toml
-[[r2_buckets]]
-binding = "BUCKET"
-bucket_name = "review-it"
-```
-
-首次部署后如果绑定没生效，在 Cloudflare 控制台 **Workers & Pages → review-it → Settings → Bindings** 里补一条
-`R2 bucket`，变量名 `BUCKET`，选择存储桶 `review-it` 即可。
+未配置 token 时工作流会跳过部署并给出警告，不会失败。
 
 ## 数据结构
 
-R2 里只有两类对象：
+R2 只有两类对象：
 
 | key | 内容 |
 | --- | --- |
-| `site/data.json` | 全部记录与标签（一个 JSON 文件） |
-| `site/images/YYYYMMDD/<16位随机>.<ext>` | 上传的图片，通过 `/api/img/<key>` 读取 |
+| `site/data.json` | 全部记录与标签 |
+| `site/images/YYYYMMDD/<16位随机>.<ext>` | 图片，通过 `/api/img/<key>` 读取 |
 
 ```jsonc
 {
@@ -105,7 +127,13 @@ R2 里只有两类对象：
       "content": "## 好吃到转圈\n\n汤头浓郁……",
       "images": [{ "key": "site/images/20261027/ab12cd34ef56gh78.jpg", "w": 1800, "h": 1200 }],
       "tags": ["t_food"],
-      "location": { "name": "一兰拉面", "address": "上海市黄浦区南京东路 100 号", "mapUrl": "" },
+      "location": {
+        "name": "一兰拉面",
+        "address": "上海市黄浦区南京东路 100 号",
+        "mapUrl": "",
+        "lat": 31.2304,
+        "lng": 121.4737
+      },
       "createdAt": "…",
       "updatedAt": "…"
     }
@@ -120,7 +148,7 @@ R2 里只有两类对象：
 | GET | `/api/posts` | 拉取全部记录与标签 |
 | GET | `/api/auth/salt?scope=add\|edit` | 取前端派生用的盐 |
 | POST | `/api/auth` | 提交 proof，换取令牌 |
-| POST | `/api/upload` | 上传图片（需 add 或 edit 令牌） |
+| POST | `/api/upload` | 上传图片（需 add / edit 令牌） |
 | POST | `/api/posts` | 新建记录（需 add 令牌） |
 | PUT | `/api/posts/:date` | 修改当天记录（需 edit 令牌） |
 | DELETE | `/api/posts/:date` | 删除当天记录（需 edit 令牌） |
@@ -137,5 +165,5 @@ R2 里只有两类对象：
 | `EDIT_PROOF_HASH` | 编辑密码对应的摘要 |
 | `SESSION_SECRET` | 签发令牌的密钥 |
 
-`.dev.vars` 与 `.secrets.json` 已在 `.gitignore` 中，不会进仓库。**换 PIN 或密码**只需重新运行
-`node scripts/generate-secrets.mjs <新密码>`，再把新值推送到 Cloudflare（`node scripts/put-secrets.mjs review-it`）。
+`.dev.vars` 与 `.secrets.json` 已在 `.gitignore` 中。**换 PIN 或密码**：重新运行
+`node scripts/generate-secrets.mjs <新密码>`，再执行 `node scripts/put-secrets.mjs`。

@@ -45,9 +45,9 @@ export default function Lightbox({ state, tagMap, onClose, onNavigate, onJump })
             {parts.month}月{parts.day}日
             <span className="ml-2 text-xs font-medium text-white/60">{parts.weekday}</span>
           </div>
-          <div className="truncate text-[11px] text-white/50">{parts.year} 年</div>
+          <div className="truncate text-xs text-white/50">{parts.year} 年</div>
         </div>
-        <div className="ml-auto rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-bold text-white/80">
+        <div className="ml-auto rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/80">
           {index + 1} / {total}
         </div>
         <button
@@ -96,18 +96,18 @@ export default function Lightbox({ state, tagMap, onClose, onNavigate, onJump })
             {tags.map((tag) => (
               <TagPill key={tag.id} tag={tag} />
             ))}
-            <span className="ml-auto flex items-center gap-1 text-[11px] font-bold text-muted">
+            <span className="ml-auto flex items-center gap-1 text-xs font-bold text-muted">
               {index + 1} / {total}
             </span>
           </div>
 
-          <h3 className="mt-2.5 text-lg font-black leading-snug sm:text-xl">
+          <h3 className="mt-2.5 text-xl font-black leading-snug sm:text-2xl">
             {entry.title || `${parts.short}的探店`}
           </h3>
 
           {(location.name || location.address) && (
-            <div className="mt-2.5 flex items-start gap-1.5 text-xs text-muted">
-              <MapPin size={14} className="mt-0.5 shrink-0 text-coral" />
+            <div className="mt-2.5 flex items-start gap-1.5 text-sm text-muted">
+              <MapPin size={15} className="mt-0.5 shrink-0 text-coral" />
               <span>
                 {location.name}
                 {location.name && location.address ? ' · ' : ''}
@@ -121,7 +121,7 @@ export default function Lightbox({ state, tagMap, onClose, onNavigate, onJump })
           <button
             type="button"
             onClick={() => onJump(entry.date)}
-            className="mt-5 w-full rounded-full bg-ink px-4 py-3 text-sm font-bold text-white transition hover:bg-ink/85"
+            className="mt-5 w-full rounded-full bg-ink px-4 py-3.5 text-base font-bold text-white transition hover:bg-ink/85"
           >
             在时间轴中查看这一天
           </button>

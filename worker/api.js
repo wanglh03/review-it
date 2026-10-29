@@ -5,8 +5,8 @@ import {
   rateLimitRemaining,
   recordFailure,
   clearFailures,
-} from '../_lib/auth.js'
-import { readData, writeData, withWriteLock, IMAGE_PREFIX } from '../_lib/store.js'
+} from './lib/auth.js'
+import { readData, writeData, withWriteLock, IMAGE_PREFIX } from './lib/store.js'
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -133,6 +133,16 @@ function sanitizeEntry(body, data) {
   let mapUrl = cleanText(rawLocation.mapUrl, 500).trim()
   if (mapUrl && !/^https?:\/\//i.test(mapUrl)) mapUrl = ''
 
+  // 地图坐标统一存 WGS-84；显示到高德底图时再转换成 GCJ-02
+  let lat = Number(rawLocation.lat)
+  let lng = Number(rawLocation.lng)
+  if (!Number.isFinite(lat) || lat < -90 || lat > 90) lat = null
+  if (!Number.isFinite(lng) || lng < -180 || lng > 180) lng = null
+  if (lat === null || lng === null) {
+    lat = null
+    lng = null
+  }
+
   const now = new Date().toISOString()
   return {
     entry: {
@@ -141,7 +151,7 @@ function sanitizeEntry(body, data) {
       content,
       images,
       tags,
-      location: { name, address, mapUrl },
+      location: { name, address, mapUrl, lat, lng },
       createdAt: now,
       updatedAt: now,
     },
@@ -456,11 +466,8 @@ async function handleSaveTags(request, env) {
 
 /* ------------------------------- 路由入口 ------------------------------- */
 
-export async function onRequest(context) {
-  const { request, env, params } = context
-  const url = new URL(request.url)
-  const rawPath = params?.path
-  const segments = (Array.isArray(rawPath) ? rawPath : String(rawPath || '').split('/')).filter(Boolean)
+export async function handleApi(request, env, url) {
+  const segments = url.pathname.replace(/^\/api\/?/, '').split('/').filter(Boolean)
 
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204 })

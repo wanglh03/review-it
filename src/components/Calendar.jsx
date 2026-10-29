@@ -43,42 +43,42 @@ export default function Calendar({ entries, onJump, className = '' }) {
       className={`rounded-[28px] border border-line/70 bg-paper p-4 shadow-card sm:p-5 ${className}`}
     >
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-peach/60 text-coral-deep">
-            <CalendarHeart size={18} />
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-peach/60 text-coral-deep">
+            <CalendarHeart size={19} />
           </span>
           <div>
-            <div className="text-sm font-black leading-tight">
+            <div className="text-base font-black leading-tight sm:text-lg">
               {view.year}年{view.month + 1}月
             </div>
-            <div className="text-[10px] font-medium text-muted">点击有记录的日子跳转</div>
+            <div className="text-xs font-medium text-muted">点击有记录的日子跳转</div>
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             aria-label="上个月"
             disabled={!canPrev}
             onClick={() => setView((current) => addMonths(current.year, current.month, -1))}
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-line text-ink transition enabled:hover:border-peach enabled:hover:text-coral-deep disabled:cursor-not-allowed disabled:opacity-35"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-line text-ink transition enabled:hover:border-peach enabled:hover:text-coral-deep disabled:cursor-not-allowed disabled:opacity-35"
           >
-            <ChevronLeft size={16} />
+            <ChevronLeft size={17} />
           </button>
           <button
             type="button"
             aria-label="下个月"
             disabled={!canNext}
             onClick={() => setView((current) => addMonths(current.year, current.month, 1))}
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-line text-ink transition enabled:hover:border-peach enabled:hover:text-coral-deep disabled:cursor-not-allowed disabled:opacity-35"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-line text-ink transition enabled:hover:border-peach enabled:hover:text-coral-deep disabled:cursor-not-allowed disabled:opacity-35"
           >
-            <ChevronRight size={16} />
+            <ChevronRight size={17} />
           </button>
         </div>
       </div>
 
       <div className="mt-4 grid grid-cols-7 gap-1 text-center">
         {WEEKDAY_INITIALS.map((day) => (
-          <div key={day} className="pb-1 text-[10px] font-bold text-muted/70">
+          <div key={day} className="pb-1.5 text-xs font-bold text-muted/70">
             {day}
           </div>
         ))}
@@ -98,7 +98,7 @@ export default function Calendar({ entries, onJump, className = '' }) {
               onClick={() => entry && onJump(cell.date)}
               aria-label={`${cell.date}${entry ? '，有记录' : '，无记录'}`}
               title={entry ? '跳到这一天的记录' : '这一天还没有记录'}
-              className={`relative flex aspect-square items-center justify-center rounded-full text-[12px] font-bold transition sm:text-[13px] ${
+              className={`relative flex aspect-square items-center justify-center rounded-full text-sm font-bold transition sm:text-[15px] ${
                 entry
                   ? 'bg-coral text-white shadow-md shadow-coral/25 hover:scale-110 hover:bg-coral-deep active:scale-95'
                   : isBeforeFirst
@@ -115,7 +115,7 @@ export default function Calendar({ entries, onJump, className = '' }) {
         })}
       </div>
 
-      <div className="mt-3 flex items-center justify-between border-t border-dashed border-line pt-3 text-[10px] font-medium text-muted">
+      <div className="mt-3 flex items-center justify-between gap-2 border-t border-dashed border-line pt-3 text-xs font-medium text-muted">
         <span>
           {entries.length === 0
             ? '还没有任何记录'

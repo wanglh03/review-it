@@ -43,8 +43,8 @@ export function Modal({ open, onClose, title, subtitle, icon, children, footer, 
               </div>
             )}
             <div className="min-w-0 flex-1">
-              {title && <h2 className="text-base font-black sm:text-lg">{title}</h2>}
-              {subtitle && <p className="mt-0.5 text-xs text-muted sm:text-[13px]">{subtitle}</p>}
+              {title && <h2 className="text-lg font-black sm:text-xl">{title}</h2>}
+              {subtitle && <p className="mt-1 text-sm leading-relaxed text-muted">{subtitle}</p>}
             </div>
             <button
               type="button"
@@ -81,7 +81,7 @@ export function ConfirmDialog({ open, title, description, confirmText = '确认'
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="flex-1 rounded-full border border-line bg-white px-4 py-3 text-sm font-bold text-ink transition hover:bg-cream disabled:opacity-60"
+            className="flex-1 rounded-full border border-line bg-white px-4 py-3 text-[15px] font-bold text-ink transition hover:bg-cream disabled:opacity-60"
           >
             再想想
           </button>
@@ -99,7 +99,7 @@ export function ConfirmDialog({ open, title, description, confirmText = '确认'
         </div>
       }
     >
-      <p className="text-sm leading-relaxed text-muted">{description}</p>
+      <p className="text-[15px] leading-relaxed text-muted">{description}</p>
     </Modal>
   )
 }
@@ -114,7 +114,7 @@ export function Toast({ toast }) {
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-6 z-[70] flex justify-center px-4 pb-safe">
       <div
-        className={`flex animate-pop items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold text-white shadow-soft ${
+        className={`flex animate-pop items-center gap-2 rounded-full px-4 py-2.5 text-[15px] font-semibold text-white shadow-soft ${
           toast.type === 'error' ? 'bg-[#b4453a]' : 'bg-ink'
         }`}
       >
@@ -131,8 +131,10 @@ export function EmptyState({ icon, title, description, action }) {
       <div className="mb-4 flex h-16 w-16 animate-floaty items-center justify-center rounded-3xl bg-peach/60 text-coral-deep">
         {icon}
       </div>
-      <h3 className="text-base font-black text-ink">{title}</h3>
-      {description && <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted">{description}</p>}
+      <h3 className="text-lg font-black text-ink">{title}</h3>
+      {description && (
+        <p className="mt-2 max-w-sm text-[15px] leading-relaxed text-muted">{description}</p>
+      )}
       {action && <div className="mt-5">{action}</div>}
     </div>
   )
@@ -144,13 +146,13 @@ export function TagPill({ tag, selected, onClick, className = '' }) {
     <Component
       type={onClick ? 'button' : undefined}
       onClick={onClick}
-      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-bold transition sm:text-xs ${
+      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[13px] font-bold transition ${
         selected
           ? 'border-coral bg-coral text-white shadow-sm shadow-coral/30'
           : 'border-line bg-white/80 text-muted hover:border-peach hover:text-coral-deep'
       } ${className}`}
     >
-      {tag.emoji && <span className="text-[13px] leading-none">{tag.emoji}</span>}
+      {tag.emoji && <span className="text-sm leading-none">{tag.emoji}</span>}
       <span>#{tag.name}</span>
     </Component>
   )

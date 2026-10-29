@@ -1,6 +1,6 @@
 /**
  * 本地接口冒烟测试：node scripts/smoke-api.mjs
- * 需要先启动 `npx wrangler pages dev public --port 8788`。
+ * 需要先启动 `npm run build && npm run dev:worker`（Worker + 本地 R2）。
  */
 import { pbkdf2Sync } from 'node:crypto'
 

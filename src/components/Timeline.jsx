@@ -27,7 +27,7 @@ export default function Timeline({ entries, tagMap, onEdit, onDelete, onImageCli
     <div className="relative">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute bottom-6 left-[64px] top-3 w-[2px] bg-gradient-to-b from-peach via-line to-line/40 sm:left-[90px]"
+        className="pointer-events-none absolute bottom-6 left-[66px] top-3 w-[2px] bg-gradient-to-b from-peach via-line to-line/40 sm:left-[92px]"
       />
       <div className="space-y-7 sm:space-y-9">
         {entries.map((entry) => (

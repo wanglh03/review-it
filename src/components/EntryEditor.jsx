@@ -20,6 +20,7 @@ import { todayStr, weekdayShort } from '../lib/date'
 import { compressImage, imageUrl } from '../lib/image'
 import { MAX_IMAGES_PER_ENTRY } from '../lib/constants'
 import Markdown from './Markdown'
+import LocationPicker from './LocationPicker'
 import { Modal, TagPill } from './ui'
 
 const emptyDraft = (date) => ({
@@ -28,7 +29,7 @@ const emptyDraft = (date) => ({
   content: '',
   images: [],
   tags: [],
-  location: { name: '', address: '', mapUrl: '' },
+  location: { name: '', address: '', mapUrl: '', lat: null, lng: null },
 })
 
 export default function EntryEditor({
@@ -65,6 +66,8 @@ export default function EntryEditor({
           name: entry.location?.name || '',
           address: entry.location?.address || '',
           mapUrl: entry.location?.mapUrl || '',
+          lat: Number.isFinite(Number(entry.location?.lat)) ? Number(entry.location.lat) : null,
+          lng: Number.isFinite(Number(entry.location?.lng)) ? Number(entry.location.lng) : null,
         },
       })
     } else {
@@ -172,7 +175,9 @@ export default function EntryEditor({
       location: {
         name: location.name.trim(),
         address: location.address.trim(),
-        mapUrl: location.mapUrl.trim(),
+        mapUrl: location.mapUrl,
+        lat: location.lat,
+        lng: location.lng,
       },
     }
 
@@ -210,7 +215,7 @@ export default function EntryEditor({
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="rounded-full border border-line bg-white px-5 py-3 text-sm font-bold text-ink transition hover:bg-cream disabled:opacity-60"
+            className="rounded-full border border-line bg-white px-6 py-3 text-base font-bold text-ink transition hover:bg-cream disabled:opacity-60"
           >
             取消
           </button>
@@ -218,24 +223,22 @@ export default function EntryEditor({
             type="button"
             onClick={save}
             disabled={busy || uploading > 0}
-            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-coral px-5 py-3 text-sm font-bold text-white shadow-lg shadow-coral/30 transition hover:bg-coral-deep disabled:opacity-60"
+            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-coral px-5 py-3 text-base font-bold text-white shadow-lg shadow-coral/30 transition hover:bg-coral-deep disabled:opacity-60"
           >
-            {busy ? <Loader2 size={17} className="animate-spin" /> : <Save size={16} />}
+            {busy ? <Loader2 size={18} className="animate-spin" /> : <Save size={17} />}
             {busy ? '正在保存…' : isEdit ? '保存修改' : '发布记录'}
           </button>
         </div>
       }
     >
-      <div className="space-y-5">
+      <div className="space-y-6">
         {/* 日期 */}
         <section>
-          <FieldLabel icon={<MapPin size={13} />} hideIcon>
-            日期
-          </FieldLabel>
+          <FieldLabel>日期</FieldLabel>
           {isEdit ? (
-            <div className="rounded-2xl border border-line bg-cream px-4 py-3 text-sm font-bold text-ink">
+            <div className="rounded-2xl border border-line bg-cream px-4 py-3 text-base font-bold text-ink">
               {dateLabel}
-              <span className="ml-2 text-[11px] font-medium text-muted">日期不可修改</span>
+              <span className="ml-2 text-xs font-medium text-muted">日期不可修改</span>
             </div>
           ) : (
             <input
@@ -244,7 +247,7 @@ export default function EntryEditor({
               min="2000-01-01"
               max="2999-12-31"
               onChange={(event) => patch({ date: event.target.value || todayStr() })}
-              className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm font-semibold outline-none transition focus:border-coral focus:ring-4 focus:ring-coral/10"
+              className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-base font-semibold outline-none transition focus:border-coral focus:ring-4 focus:ring-coral/10"
             />
           )}
         </section>
@@ -257,7 +260,7 @@ export default function EntryEditor({
             onChange={(event) => patch({ title: event.target.value })}
             maxLength={80}
             placeholder="比如：巷子里的那家拉面"
-            className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm font-semibold outline-none transition placeholder:font-normal placeholder:text-muted/55 focus:border-coral focus:ring-4 focus:ring-coral/10"
+            className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-base font-semibold outline-none transition placeholder:font-normal placeholder:text-muted/55 focus:border-coral focus:ring-4 focus:ring-coral/10"
           />
         </section>
 
@@ -268,46 +271,46 @@ export default function EntryEditor({
             <button
               type="button"
               onClick={() => setPreview((value) => !value)}
-              className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold transition ${
+              className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold transition ${
                 preview ? 'bg-ink text-white' : 'bg-cream text-muted hover:text-ink'
               }`}
             >
-              {preview ? <Pencil size={12} /> : <Eye size={12} />}
+              {preview ? <Pencil size={13} /> : <Eye size={13} />}
               {preview ? '继续写' : '预览'}
             </button>
           </div>
 
           {preview ? (
-            <div className="min-h-[180px] rounded-2xl border border-line bg-cream/60 px-4 py-3.5">
+            <div className="min-h-[190px] rounded-2xl border border-line bg-cream/60 px-4 py-3.5">
               {draft.content.trim() ? (
                 <Markdown source={draft.content} />
               ) : (
-                <p className="text-sm text-muted/70">还没有内容</p>
+                <p className="text-base text-muted/70">还没有内容</p>
               )}
             </div>
           ) : (
             <div className="overflow-hidden rounded-2xl border border-line bg-white transition focus-within:border-coral focus-within:ring-4 focus-within:ring-coral/10">
               <div className="flex flex-wrap items-center gap-0.5 border-b border-line/70 bg-cream/50 px-2 py-1.5">
                 <ToolButton label="加粗" onClick={() => wrapSelection('**', '**', '加粗文字')}>
-                  <Bold size={15} />
+                  <Bold size={16} />
                 </ToolButton>
                 <ToolButton label="斜体" onClick={() => wrapSelection('*', '*', '斜体文字')}>
-                  <Italic size={15} />
+                  <Italic size={16} />
                 </ToolButton>
                 <ToolButton label="小标题" onClick={() => prefixLine('## ')}>
-                  <Heading2 size={15} />
+                  <Heading2 size={16} />
                 </ToolButton>
                 <ToolButton label="列表" onClick={() => prefixLine('- ')}>
-                  <ListIcon size={15} />
+                  <ListIcon size={16} />
                 </ToolButton>
                 <ToolButton label="引用" onClick={() => prefixLine('> ')}>
-                  <Quote size={15} />
+                  <Quote size={16} />
                 </ToolButton>
                 <ToolButton
                   label="链接"
                   onClick={() => wrapSelection('[', '](https://)', '链接文字')}
                 >
-                  <Link2 size={15} />
+                  <Link2 size={16} />
                 </ToolButton>
               </div>
               <textarea
@@ -317,11 +320,11 @@ export default function EntryEditor({
                 rows={8}
                 maxLength={30000}
                 placeholder={'今天吃了什么？\n\n**好吃指数**：★★★★★\n- 汤头浓郁\n- 面条弹牙'}
-                className="w-full resize-y bg-transparent px-4 py-3.5 text-sm leading-relaxed outline-none placeholder:text-muted/50"
+                className="w-full resize-y bg-transparent px-4 py-3.5 text-base leading-relaxed outline-none placeholder:text-muted/50"
               />
             </div>
           )}
-          <p className="mt-1.5 text-right text-[10px] text-muted/70">{draft.content.length} / 30000</p>
+          <p className="mt-1.5 text-right text-xs text-muted/70">{draft.content.length} / 30000</p>
         </section>
 
         {/* 图片 */}
@@ -338,9 +341,9 @@ export default function EntryEditor({
                   type="button"
                   onClick={() => removeImage(image.key)}
                   aria-label="移除这张图片"
-                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-ink/70 text-white backdrop-blur transition hover:bg-[#b4453a]"
+                  className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-ink/70 text-white backdrop-blur transition hover:bg-[#b4453a]"
                 >
-                  <X size={13} />
+                  <X size={14} />
                 </button>
               </div>
             ))}
@@ -350,7 +353,7 @@ export default function EntryEditor({
                 key={`uploading-${index}`}
                 className="flex aspect-square items-center justify-center rounded-2xl border border-dashed border-line bg-cream"
               >
-                <Loader2 size={18} className="animate-spin text-coral" />
+                <Loader2 size={20} className="animate-spin text-coral" />
               </div>
             ))}
 
@@ -360,8 +363,8 @@ export default function EntryEditor({
                 onClick={() => fileRef.current?.click()}
                 className="flex aspect-square flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-line bg-cream/60 text-muted transition hover:border-peach hover:text-coral-deep"
               >
-                <ImagePlus size={20} />
-                <span className="text-[10px] font-bold">添加照片</span>
+                <ImagePlus size={22} />
+                <span className="text-xs font-bold">添加照片</span>
               </button>
             )}
           </div>
@@ -382,7 +385,7 @@ export default function EntryEditor({
             <button
               type="button"
               onClick={onManageTags}
-              className="text-[11px] font-bold text-muted transition hover:text-coral-deep"
+              className="text-xs font-bold text-muted transition hover:text-coral-deep"
             >
               维护标签
             </button>
@@ -394,11 +397,11 @@ export default function EntryEditor({
                 tag={tag}
                 selected={draft.tags.includes(tag.id)}
                 onClick={() => toggleTag(tag.id)}
-                className="px-3 py-1.5"
+                className="px-3 py-1.5 text-[13px]"
               />
             ))}
             {!tags.length && (
-              <p className="text-xs text-muted">还没有标签，点右上角「维护标签」加一个吧</p>
+              <p className="text-sm text-muted">还没有标签，点右上角「维护标签」加一个吧</p>
             )}
           </div>
         </section>
@@ -406,50 +409,37 @@ export default function EntryEditor({
         {/* 地点 */}
         <section>
           <FieldLabel>
-            地点 · 探店的位置
+            地点 · 在地图上选个点
             <span className="ml-1 font-normal text-muted/70">（选填）</span>
           </FieldLabel>
-          <div className="space-y-2">
+          <LocationPicker
+            value={{ lat: location.lat, lng: location.lng }}
+            onChange={(coords) => patchLocation(coords)}
+          />
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <input
               value={location.name}
               onChange={(event) => patchLocation({ name: event.target.value })}
               maxLength={60}
-              placeholder="地点名称，比如：一兰拉面（南京东路店）"
-              className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm outline-none transition placeholder:text-muted/55 focus:border-coral focus:ring-4 focus:ring-coral/10"
+              placeholder="地点名称，比如：一兰拉面"
+              className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-base outline-none transition placeholder:text-muted/55 focus:border-coral focus:ring-4 focus:ring-coral/10"
             />
             <input
               value={location.address}
               onChange={(event) => patchLocation({ address: event.target.value })}
               maxLength={160}
-              placeholder="详细地址，比如：上海市黄浦区南京东路 100 号"
-              className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm outline-none transition placeholder:text-muted/55 focus:border-coral focus:ring-4 focus:ring-coral/10"
+              placeholder="详细地址，比如：南京东路 100 号"
+              className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-base outline-none transition placeholder:text-muted/55 focus:border-coral focus:ring-4 focus:ring-coral/10"
             />
-            <input
-              value={location.mapUrl}
-              onChange={(event) => patchLocation({ mapUrl: event.target.value })}
-              maxLength={500}
-              inputMode="url"
-              placeholder="地图链接（选填，不填就用名称自动搜索）"
-              className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm outline-none transition placeholder:text-muted/55 focus:border-coral focus:ring-4 focus:ring-coral/10"
-            />
-            {(location.name || location.address) && (
-              <a
-                href={`https://uri.amap.com/search?keyword=${encodeURIComponent(
-                  [location.name, location.address].filter(Boolean).join(' '),
-                )}&src=review-it&callnative=1`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-[11px] font-bold text-coral-deep hover:underline"
-              >
-                <MapPin size={12} />
-                先在地图上找找看
-              </a>
-            )}
           </div>
+          <p className="mt-2 flex items-center gap-1 text-xs text-muted">
+            <MapPin size={12} className="text-coral" />
+            点地图放一个标记，名称和地址可以留空；地图页会显示所有标记点。
+          </p>
         </section>
 
         {error && (
-          <p className="rounded-2xl bg-rose/30 px-4 py-3 text-xs font-semibold text-[#a53f35]">
+          <p className="rounded-2xl bg-rose/30 px-4 py-3 text-sm font-semibold text-[#a53f35]">
             {error}
           </p>
         )}
@@ -458,10 +448,9 @@ export default function EntryEditor({
   )
 }
 
-function FieldLabel({ children, className = '', hideIcon, icon }) {
+function FieldLabel({ children, className = '' }) {
   return (
-    <div className={`mb-2 flex items-center gap-1 text-xs font-black text-ink/80 ${className}`}>
-      {!hideIcon && icon}
+    <div className={`mb-2 flex items-center gap-1 text-sm font-black text-ink/80 ${className}`}>
       {children}
     </div>
   )
@@ -474,7 +463,7 @@ function ToolButton({ label, onClick, children }) {
       onClick={onClick}
       title={label}
       aria-label={label}
-      className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition hover:bg-white hover:text-coral-deep"
+      className="flex h-9 w-9 items-center justify-center rounded-lg text-muted transition hover:bg-white hover:text-coral-deep"
     >
       {children}
     </button>

@@ -6,15 +6,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:worker": "wrangler dev --port 8788",
     "build": "vite build",
     "preview": "vite preview",
-    "pages:dev": "wrangler pages dev dist --port 8788",
-    "deploy": "vite build && wrangler pages deploy dist --project-name review-it --branch main"
+    "deploy": "vite build && wrangler deploy"
   },
   "keywords": [
     "review",
     "timeline",
-    "cloudflare-pages"
+    "cloudflare-workers",
+    "r2"
   ],
   "author": "wanglh03",
   "license": "MIT",
@@ -23,6 +24,7 @@
   },
   "dependencies": {
     "dompurify": "^3.4.17",
+    "leaflet": "^1.9.4",
     "lucide-react": "^1.62.0",
     "marked": "^18.1.2",
     "react": "^19.3.1",

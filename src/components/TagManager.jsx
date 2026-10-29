@@ -72,7 +72,7 @@ export default function TagManager({ open, tags, token, onClose, onSaved }) {
             type="button"
             onClick={save}
             disabled={busy}
-            className="flex flex-[1.4] items-center justify-center gap-2 rounded-full bg-coral px-4 py-3 text-sm font-bold text-white shadow-lg shadow-coral/30 transition hover:bg-coral-deep disabled:opacity-60"
+            className="flex flex-[1.4] items-center justify-center gap-2 rounded-full bg-coral px-4 py-3 text-base font-bold text-white shadow-lg shadow-coral/30 transition hover:bg-coral-deep disabled:opacity-60"
           >
             {busy && <Loader2 size={16} className="animate-spin" />}
             保存标签
@@ -99,7 +99,7 @@ export default function TagManager({ open, tags, token, onClose, onSaved }) {
               maxLength={12}
               placeholder="标签名，比如 美食"
               aria-label="标签名"
-              className="min-w-0 flex-1 rounded-xl bg-cream px-3 py-2.5 text-sm font-semibold outline-none transition placeholder:font-normal placeholder:text-muted/50 focus:ring-2 focus:ring-coral/25"
+              className="min-w-0 flex-1 rounded-xl bg-cream px-3 py-2.5 text-base font-semibold outline-none transition placeholder:font-normal placeholder:text-muted/50 focus:ring-2 focus:ring-coral/25"
             />
             <button
               type="button"
@@ -115,7 +115,7 @@ export default function TagManager({ open, tags, token, onClose, onSaved }) {
         <button
           type="button"
           onClick={add}
-          className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-line py-3 text-xs font-bold text-muted transition hover:border-peach hover:text-coral-deep"
+          className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-line py-3 text-sm font-bold text-muted transition hover:border-peach hover:text-coral-deep"
         >
           <Plus size={15} />
           添加标签
@@ -123,12 +123,12 @@ export default function TagManager({ open, tags, token, onClose, onSaved }) {
       </div>
 
       {error && (
-        <p className="mt-4 rounded-2xl bg-rose/30 px-3.5 py-2.5 text-xs font-semibold text-[#a53f35]">
+        <p className="mt-4 rounded-2xl bg-rose/30 px-3.5 py-2.5 text-sm font-semibold text-[#a53f35]">
           {error}
         </p>
       )}
 
-      <p className="mt-4 rounded-2xl bg-cream px-3.5 py-3 text-[11px] leading-relaxed text-muted">
+      <p className="mt-4 rounded-2xl bg-cream px-3.5 py-3 text-xs leading-relaxed text-muted">
         删除一个标签时，所有记录里对应的标签也会一起移除；改名不会影响已有记录。
       </p>
     </Modal>

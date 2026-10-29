@@ -1,8 +1,19 @@
 name = "review-it"
+main = "worker/index.js"
 compatibility_date = "2026-10-01"
-pages_build_output_dir = "dist"
+
+# Vite 构建产物作为静态资源，未命中的路径回退到 index.html（SPA）
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
 
 # 图片与记录数据都存放在 R2 存储桶 review-it 中
 [[r2_buckets]]
 binding = "BUCKET"
 bucket_name = "review-it"
+
+# 自定义域名：部署时自动创建 DNS 记录并签发证书
+[[routes]]
+pattern = "review.gtbro.vip"
+custom_domain = true
