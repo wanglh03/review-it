@@ -7,6 +7,7 @@ import {
   clearFailures,
 } from './lib/auth.js'
 import { readData, writeData, withWriteLock, IMAGE_PREFIX } from './lib/store.js'
+import { gcj02ToWgs84 } from '../src/lib/geo.js'
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -464,6 +465,241 @@ async function handleSaveTags(request, env) {
   })
 }
 
+/* ------------------------------- 地理编码搜索 ------------------------------- */
+
+const geoCache = new Map()
+const geoHits = new Map()
+
+function geoCacheGet(key) {
+  const item = geoCache.get(key)
+  if (!item) return null
+  if (Date.now() - item.at > 10 * 60 * 1000) {
+    geoCache.delete(key)
+    return null
+  }
+  return item.results
+}
+
+function geoCacheSet(key, results) {
+  if (geoCache.size > 200) {
+    const oldest = [...geoCache.entries()].sort((a, b) => a[1].at - b[1].at)[0]
+    if (oldest) geoCache.delete(oldest[0])
+  }
+  geoCache.set(key, { at: Date.now(), results })
+}
+
+function geoAllowed(ip) {
+  const now = Date.now()
+  const record = geoHits.get(ip)
+  if (!record || now > record.resetAt) {
+    geoHits.set(ip, { count: 1, resetAt: now + 10 * 60 * 1000 })
+    return true
+  }
+  if (record.count >= 40) return false
+  record.count += 1
+  return true
+}
+
+function simplifyNominatim(item) {
+  const lat = Number(item.lat)
+  const lng = Number(item.lon)
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+  const display = String(item.display_name || '')
+  const name = String(item.name || display.split(',')[0] || '').trim()
+  let address = display
+  if (name && address.startsWith(name)) {
+    address = address.slice(name.length).replace(/^[,，\s]+/, '')
+  }
+  // 去掉邮编 / 国家，并限制层级，避免地址一长串
+  address = address
+    .split(',')
+    .map((part) => part.trim())
+    .filter((part) => part && part !== '中国' && part !== 'China' && !/^\d{5,6}$/.test(part))
+    .slice(0, 5)
+    .join(', ')
+  return {
+    id: `n${item.place_id || `${lat},${lng}`}`,
+    name: name || display,
+    address,
+    lat,
+    lng,
+  }
+}
+
+function simplifyPhoton(feature) {
+  const coords = feature?.geometry?.coordinates
+  if (!Array.isArray(coords) || coords.length < 2) return null
+  const [lng, lat] = coords.map(Number)
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+  const properties = feature.properties || {}
+  const name = String(properties.name || properties.street || properties.city || '').trim()
+  const address = [
+    properties.street,
+    properties.district,
+    properties.city,
+    properties.state,
+    properties.country,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+  return {
+    id: `p${properties.osm_id || `${lat},${lng}`}`,
+    name: name || address,
+    address,
+    lat,
+    lng,
+  }
+}
+
+let lastNominatimAt = 0
+
+async function throttleNominatim() {
+  // Nominatim 使用政策要求每秒最多 1 次，这里留一点余量
+  const wait = 1200 - (Date.now() - lastNominatimAt)
+  if (wait > 0) await sleep(wait)
+  lastNominatimAt = Date.now()
+}
+
+async function searchNominatim(query) {
+  await throttleNominatim()
+  const endpoint =
+    'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&dedupe=1&countrycodes=cn' +
+    `&accept-language=zh-CN&q=${encodeURIComponent(query)}`
+  const response = await fetch(endpoint, {
+    headers: {
+      'User-Agent': 'review-it/1.0 (https://review.gtbro.vip)',
+      'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.5',
+    },
+    signal: AbortSignal.timeout(5000),
+  })
+  if (!response.ok) throw new Error(`nominatim ${response.status}`)
+  const list = await response.json()
+  return (Array.isArray(list) ? list : []).map(simplifyNominatim).filter(Boolean)
+}
+
+async function searchPhoton(query) {
+  const endpoint = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=6&lang=zh`
+  const response = await fetch(endpoint, {
+    headers: { 'User-Agent': 'review-it/1.0 (https://review.gtbro.vip)' },
+    signal: AbortSignal.timeout(5000),
+  })
+  if (!response.ok) throw new Error(`photon ${response.status}`)
+  const payload = await response.json()
+  return (payload?.features || []).map(simplifyPhoton).filter(Boolean)
+}
+
+/* 高德 Web 服务（配置 AMAP_KEY 后优先使用，中文店名 / 门牌号覆盖最好） */
+function simplifyAmap(poi, fallbackName) {
+  const [lngRaw, latRaw] = String(poi.location || '').split(',')
+  const gcjLng = Number(lngRaw)
+  const gcjLat = Number(latRaw)
+  if (!Number.isFinite(gcjLng) || !Number.isFinite(gcjLat)) return null
+  const [lng, lat] = gcj02ToWgs84(gcjLng, gcjLat)
+  const address = [poi.pname, poi.cityname, poi.adname, poi.address]
+    .filter(Boolean)
+    .join(' ')
+    .trim()
+  return {
+    id: `a${poi.id || `${lat},${lng}`}`,
+    name: poi.name || fallbackName,
+    address,
+    lat,
+    lng,
+  }
+}
+
+async function searchAmapPlaces(query, key) {
+  const endpoint =
+    'https://restapi.amap.com/v3/place/text?' +
+    `key=${encodeURIComponent(key)}&keywords=${encodeURIComponent(query)}` +
+    '&offset=8&page=1&extensions=base&citylimit=false'
+  const response = await fetch(endpoint, { signal: AbortSignal.timeout(5000) })
+  if (!response.ok) throw new Error(`amap ${response.status}`)
+  const payload = await response.json()
+  if (payload.status !== '1') throw new Error(`amap ${payload.info || 'error'}`)
+  return (Array.isArray(payload.pois) ? payload.pois : [])
+    .map((poi) => simplifyAmap(poi, query))
+    .filter(Boolean)
+}
+
+async function geocodeAmap(query, key) {
+  const endpoint =
+    'https://restapi.amap.com/v3/geocode/geo?' +
+    `key=${encodeURIComponent(key)}&address=${encodeURIComponent(query)}&batch=false`
+  const response = await fetch(endpoint, { signal: AbortSignal.timeout(5000) })
+  if (!response.ok) throw new Error(`amap geocode ${response.status}`)
+  const payload = await response.json()
+  if (payload.status !== '1') throw new Error(`amap geocode ${payload.info || 'error'}`)
+  return (Array.isArray(payload.geocodes) ? payload.geocodes : [])
+    .map((geo) => simplifyAmap({ ...geo, name: query }, query))
+    .filter(Boolean)
+}
+
+async function handleGeoSearch(request, env, url) {
+  const query = String(url.searchParams.get('q') || '').trim().slice(0, 60)
+  if (query.length < 2) return fail('至少输入两个字再搜索', 400, 'VALIDATION')
+
+  const ip = clientIp(request)
+  if (!geoAllowed(ip)) return fail('搜索太频繁了，休息一会儿再试', 429, 'RATE_LIMITED')
+
+  const cacheKey = query.toLowerCase()
+  const cached = geoCacheGet(cacheKey)
+  if (cached) return json({ results: cached })
+
+  let results = []
+  let source = 'none'
+  let responded = false
+
+  // 1) 配了高德 Key 就优先用高德（中文店名 / 门牌号覆盖最好）
+  if (env.AMAP_KEY) {
+    try {
+      results = await searchAmapPlaces(query, env.AMAP_KEY)
+      responded = true
+      if (results.length) source = 'amap'
+    } catch (error) {
+      console.error('amap place search failed', error)
+    }
+    if (!results.length) {
+      try {
+        results = await geocodeAmap(query, env.AMAP_KEY)
+        responded = true
+        if (results.length) source = 'amap'
+      } catch (error) {
+        console.error('amap geocode failed', error)
+      }
+    }
+  }
+
+  // 2) 没有 Key 或高德没结果时，退回 OSM（地标、城市、道路覆盖还可以）
+  if (!results.length) {
+    try {
+      results = await searchNominatim(query)
+      responded = true
+      if (results.length) source = 'nominatim'
+    } catch (error) {
+      console.error('nominatim search failed', error)
+      // 3) Nominatim 不可用时才尝试 Photon，避免每次搜索都多等一轮
+      try {
+        const photon = await searchPhoton(query)
+        responded = true
+        if (photon.length) {
+          results = photon
+          source = 'photon'
+        }
+      } catch (photonError) {
+        console.error('photon search failed', photonError)
+      }
+    }
+  }
+
+  if (!responded) {
+    return fail('搜索服务暂时不可用，仍可点击地图选点', 502, 'GEO_UPSTREAM')
+  }
+
+  geoCacheSet(cacheKey, results)
+  return json({ results, source })
+}
+
 /* ------------------------------- 路由入口 ------------------------------- */
 
 export async function handleApi(request, env, url) {
@@ -521,6 +757,10 @@ export async function handleApi(request, env, url) {
 
     if (head === 'tags' && request.method === 'POST') {
       return handleSaveTags(request, env)
+    }
+
+    if (head === 'geo' && rest[0] === 'search' && request.method === 'GET') {
+      return handleGeoSearch(request, env, url)
     }
 
     return fail('接口不存在', 404, 'NOT_FOUND')

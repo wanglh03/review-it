@@ -16,11 +16,29 @@
 - **相册**：只看图片的瀑布流，点开照片能看到当天整篇记录，并可一键跳回时间轴。
 - **大地图**：把所有记录过的地点标在同一张地图上，点标记看当天记录。
 - **地图选点**：添加 / 编辑记录时，直接在地图上点击或拖动标记来选位置，也可以「定位到我」。
+- **地图搜索**：输入店名或地址搜索，点结果自动标点并回填名称、地址。配置高德 Key 后使用高德数据，否则用 OpenStreetMap 兜底。
 - **可爱风日历**：有记录的日子是珊瑚色圆点，点一下跳转；没记录的日期灰色且不可点；翻页最远只到第一篇记录的月份。
 - **添加记录**：选日期、写 Markdown（工具栏 + 预览）、传照片（浏览器端自动压缩）、选标签、地图选点；需要 **PIN 码**。
 - **修改 / 删除**：每条记录右上角，需要 **编辑密码**。
 - **标签维护**：改名、换 emoji、增删；删除标签会同步从记录上移除。
 - **手机适配**：底部抽屉弹窗、安全区适配、禁止双指 / 双击缩放。
+
+## 地图搜索（可选接高德）
+
+搜索接口 `/api/geo/search` 默认使用 OpenStreetMap（Nominatim / Photon），不需要 Key，
+适合搜地标、路名、城市；但 OSM 缺少大量餐厅类 POI。
+
+要搜到「一兰拉面」这种店名，建议配置一个高德 **Web 服务** Key：
+
+1. 打开 <https://console.amap.com/dev/key/app>，创建应用并添加 Key；
+2. 服务平台选择 **Web 服务**（不是 Web 端 JS API）；
+3. 把 Key 写入 Worker Secret：
+
+```bash
+npx wrangler secret put AMAP_KEY
+```
+
+配置后搜索会优先走高德（含门牌号 / 店名），失败时自动回退 OSM。
 
 ## 安全设计
 
@@ -153,6 +171,7 @@ R2 只有两类对象：
 | PUT | `/api/posts/:date` | 修改当天记录（需 edit 令牌） |
 | DELETE | `/api/posts/:date` | 删除当天记录（需 edit 令牌） |
 | POST | `/api/tags` | 保存标签（需 edit 令牌） |
+| GET | `/api/geo/search?q=` | 店名 / 地址搜索（公开） |
 | GET | `/api/img/*` | 读取图片 |
 
 ## 密钥
@@ -164,6 +183,7 @@ R2 只有两类对象：
 | `ADD_PROOF_HASH` | PIN 对应的摘要 |
 | `EDIT_PROOF_HASH` | 编辑密码对应的摘要 |
 | `SESSION_SECRET` | 签发令牌的密钥 |
+| `AMAP_KEY` | 可选，高德 Web 服务 Key（用于店名搜索） |
 
 `.dev.vars` 与 `.secrets.json` 已在 `.gitignore` 中。**换 PIN 或密码**：重新运行
 `node scripts/generate-secrets.mjs <新密码>`，再执行 `node scripts/put-secrets.mjs`。

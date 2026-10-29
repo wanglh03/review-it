@@ -51,4 +51,5 @@ export const api = {
     request(`/posts/${date}`, { method: 'PUT', body: entry, token }),
   deleteEntry: (date, token) => request(`/posts/${date}`, { method: 'DELETE', token }),
   saveTags: (tags, token) => request('/tags', { method: 'POST', body: { tags }, token }),
+  geoSearch: (query, signal) => request(`/geo/search?q=${encodeURIComponent(query)}`, { signal }),
 }

@@ -415,6 +415,14 @@ export default function EntryEditor({
           <LocationPicker
             value={{ lat: location.lat, lng: location.lng }}
             onChange={(coords) => patchLocation(coords)}
+            onPick={(place) =>
+              patchLocation({
+                lat: place.lat,
+                lng: place.lng,
+                name: place.name || location.name,
+                address: place.address || location.address,
+              })
+            }
           />
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <input
