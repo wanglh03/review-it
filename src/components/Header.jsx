@@ -21,7 +21,7 @@ export default function Header({ mode, onModeChange, onAdd, onOpenCalendar }) {
             </span>
             <span className="mt-0.5 flex items-center gap-1 text-[13px] font-medium text-muted">
               <Sparkles size={12} className="text-coral" />
-              把好吃的、好玩的、好住的都记下来
+              把好吃的、好玩的都记录下来
             </span>
           </span>
         </a>

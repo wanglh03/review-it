@@ -47,9 +47,8 @@ export const api = {
   },
 
   createEntry: (entry, token) => request('/posts', { method: 'POST', body: entry, token }),
-  updateEntry: (date, entry, token) =>
-    request(`/posts/${date}`, { method: 'PUT', body: entry, token }),
-  deleteEntry: (date, token) => request(`/posts/${date}`, { method: 'DELETE', token }),
+  updateEntry: (id, entry, token) => request(`/posts/${id}`, { method: 'PUT', body: entry, token }),
+  deleteEntry: (id, token) => request(`/posts/${id}`, { method: 'DELETE', token }),
   saveTags: (tags, token) => request('/tags', { method: 'POST', body: { tags }, token }),
   geoSearch: (query, { near, signal } = {}) => {
     const params = new URLSearchParams({ q: query })

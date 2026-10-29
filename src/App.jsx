@@ -103,7 +103,7 @@ export default function App() {
     if (!pendingJump || mode !== 'timeline' || status !== 'ready') return undefined
 
     const timer = window.setTimeout(() => {
-      const element = document.getElementById(`entry-${pendingJump.date}`)
+      const element = document.querySelector(`[data-entry="${pendingJump.date}"]`)
       if (!element) {
         setPendingJump(null)
         return
@@ -252,8 +252,11 @@ export default function App() {
     setEditorState({ open: false, mode: 'create', entry: null, date: null })
     setData((current) => {
       if (!current) return current
-      const rest = current.entries.filter((item) => item.date !== entry.date)
-      const nextEntries = [...rest, entry].sort((a, b) => (a.date < b.date ? 1 : -1))
+      const rest = current.entries.filter((item) => item.id !== entry.id)
+      const nextEntries = [...rest, entry].sort((a, b) => {
+        if (a.date !== b.date) return a.date < b.date ? 1 : -1
+        return (a.createdAt || '') < (b.createdAt || '') ? 1 : -1
+      })
       return { ...current, entries: nextEntries }
     })
     notify(isEdit ? '修改好啦' : '记录已发布')
@@ -265,17 +268,17 @@ export default function App() {
     if (!deleteTarget || deleting) return
     setDeleting(true)
     try {
-      await api.deleteEntry(deleteTarget.date, editToken)
+      await api.deleteEntry(deleteTarget.id, editToken)
       setData((current) =>
         current
           ? {
               ...current,
-              entries: current.entries.filter((item) => item.date !== deleteTarget.date),
+              entries: current.entries.filter((item) => item.id !== deleteTarget.id),
             }
           : current,
       )
       setDeleteTarget(null)
-      notify('已删除这一天的记录')
+      notify('已删除这条记录')
     } catch (error) {
       if (error.status === 401) {
         setDeleteTarget(null)
@@ -370,7 +373,7 @@ export default function App() {
                     {entries.length
                       ? `从 ${dateParts(entries[entries.length - 1].date).long} 开始，已经记录了 ${
                           entries.length
-                        } 天、${headerMeta?.photoCount || 0} 张照片`
+                        } 篇、${headerMeta?.photoCount || 0} 张照片`
                       : '美食、景点、酒店……把每一次探店都留在这里'}
                   </p>
                 </div>
@@ -503,7 +506,7 @@ export default function App() {
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        title="删除这一天的记录？"
+        title="删除这条记录？"
         description={
           deleteTarget
             ? `${dateParts(deleteTarget.date).long} 的内容和 ${

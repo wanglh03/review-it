@@ -8,7 +8,8 @@ export default function Sidebar({ entries, activeDate, onJump }) {
   const stats = useMemo(() => {
     const photos = entries.reduce((sum, entry) => sum + (entry.images?.length || 0), 0)
     const places = entries.filter((entry) => hasCoords(entry.location)).length
-    return { photos, places, days: entries.length }
+    const days = new Set(entries.map((entry) => entry.date)).size
+    return { photos, places, days }
   }, [entries])
 
   return (
@@ -17,7 +18,7 @@ export default function Sidebar({ entries, activeDate, onJump }) {
         <div className="overflow-hidden rounded-[30px] border border-line/70 bg-gradient-to-br from-[#fff3e6] via-paper to-[#ffeff1] p-5 shadow-card">
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-coral-deep">
             <Sparkles size={14} />
-            我们的小账本
+            小账本
           </div>
           <div className="mt-3 grid grid-cols-3 gap-2 text-center">
             <Stat value={stats.days} label="天有记录" />
@@ -37,9 +38,16 @@ export default function Sidebar({ entries, activeDate, onJump }) {
             {entries.map((entry) => {
               const parts = dateParts(entry.date)
               const active = entry.date === activeDate
+              const time = entry.createdAt
+                ? new Date(entry.createdAt).toLocaleTimeString('zh-CN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false,
+                  })
+                : ''
               return (
                 <button
-                  key={entry.date}
+                  key={entry.id || entry.date}
                   type="button"
                   onClick={() => onJump(entry.date)}
                   className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 py-2 text-left transition ${
@@ -60,6 +68,7 @@ export default function Sidebar({ entries, activeDate, onJump }) {
                     </span>
                     <span className="block truncate text-xs text-muted">
                       {parts.weekday}
+                      {time ? ` ${time}` : ''}
                       {entry.location?.name ? ` · ${entry.location.name}` : ''}
                       {entry.images?.length ? ` · ${entry.images.length} 图` : ''}
                     </span>

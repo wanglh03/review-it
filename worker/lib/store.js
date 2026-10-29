@@ -45,47 +45,63 @@ export function normalizeData(raw) {
 
   if (Array.isArray(raw.entries)) {
     const validTagIds = new Set(data.tags.map((tag) => tag.id))
+    const usedIds = new Set()
     data.entries = raw.entries
       .filter((entry) => entry && /^\d{4}-\d{2}-\d{2}$/.test(entry.date || ''))
-      .map((entry) => ({
-        date: entry.date,
-        title: String(entry.title || '').slice(0, 80),
-        content: String(entry.content || '').slice(0, 30000),
-        images: Array.isArray(entry.images)
-          ? entry.images
-              .filter((image) => image && typeof image.key === 'string')
-              .map((image) => ({
-                key: image.key,
-                w: Number(image.w) || 0,
-                h: Number(image.h) || 0,
-              }))
-              .slice(0, 12)
-          : [],
-        tags: Array.isArray(entry.tags)
-          ? [...new Set(entry.tags.filter((id) => validTagIds.has(id)))].slice(0, 8)
-          : [],
-        location:
-          entry.location && typeof entry.location === 'object'
-            ? {
-                name: String(entry.location.name || '').slice(0, 60),
-                address: String(entry.location.address || '').slice(0, 160),
-                mapUrl: String(entry.location.mapUrl || '').slice(0, 500),
-                lat:
-                  Number.isFinite(Number(entry.location.lat)) &&
-                  Math.abs(Number(entry.location.lat)) <= 90
-                    ? Number(entry.location.lat)
-                    : null,
-                lng:
-                  Number.isFinite(Number(entry.location.lng)) &&
-                  Math.abs(Number(entry.location.lng)) <= 180
-                    ? Number(entry.location.lng)
-                    : null,
-              }
-            : { name: '', address: '', mapUrl: '', lat: null, lng: null },
-        createdAt: entry.createdAt || new Date().toISOString(),
-        updatedAt: entry.updatedAt || entry.createdAt || new Date().toISOString(),
-      }))
-      .sort((a, b) => (a.date < b.date ? 1 : -1))
+      .map((entry) => {
+        const baseId =
+          typeof entry.id === 'string' && /^[A-Za-z0-9_-]{3,64}$/.test(entry.id)
+            ? entry.id
+            : `legacy-${entry.date}`
+        let id = baseId
+        let suffix = 2
+        while (usedIds.has(id)) id = `${baseId}-${suffix++}`
+        usedIds.add(id)
+
+        return {
+          id,
+          date: entry.date,
+          title: String(entry.title || '').slice(0, 80),
+          content: String(entry.content || '').slice(0, 30000),
+          images: Array.isArray(entry.images)
+            ? entry.images
+                .filter((image) => image && typeof image.key === 'string')
+                .map((image) => ({
+                  key: image.key,
+                  w: Number(image.w) || 0,
+                  h: Number(image.h) || 0,
+                }))
+                .slice(0, 12)
+            : [],
+          tags: Array.isArray(entry.tags)
+            ? [...new Set(entry.tags.filter((id) => validTagIds.has(id)))].slice(0, 8)
+            : [],
+          location:
+            entry.location && typeof entry.location === 'object'
+              ? {
+                  name: String(entry.location.name || '').slice(0, 60),
+                  address: String(entry.location.address || '').slice(0, 160),
+                  mapUrl: String(entry.location.mapUrl || '').slice(0, 500),
+                  lat:
+                    Number.isFinite(Number(entry.location.lat)) &&
+                    Math.abs(Number(entry.location.lat)) <= 90
+                      ? Number(entry.location.lat)
+                      : null,
+                  lng:
+                    Number.isFinite(Number(entry.location.lng)) &&
+                    Math.abs(Number(entry.location.lng)) <= 180
+                      ? Number(entry.location.lng)
+                      : null,
+                }
+              : { name: '', address: '', mapUrl: '', lat: null, lng: null },
+          createdAt: entry.createdAt || new Date().toISOString(),
+          updatedAt: entry.updatedAt || entry.createdAt || new Date().toISOString(),
+        }
+      })
+      .sort((a, b) => {
+        if (a.date !== b.date) return a.date < b.date ? 1 : -1
+        return (a.createdAt || '') < (b.createdAt || '') ? 1 : -1
+      })
   }
 
   data.updatedAt = raw.updatedAt || null

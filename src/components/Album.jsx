@@ -26,7 +26,7 @@ export default function Album({ entries, onOpen, onAdd }) {
             相册
           </h2>
           <p className="mt-1.5 text-sm font-medium text-muted sm:text-[15px]">
-            只看照片 · 共 {totalPhotos} 张 · 点开就能看到当天的故事
+            共 {totalPhotos} 张照片
           </p>
         </div>
         <span className="hidden shrink-0 items-center gap-1.5 rounded-full bg-white/80 px-3.5 py-2 text-xs font-bold text-muted shadow-sm sm:flex">

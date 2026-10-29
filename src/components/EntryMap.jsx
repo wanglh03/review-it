@@ -12,7 +12,7 @@ export default function EntryMap({ entries, tagMap, onOpenEntry, onAdd }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const layerRef = useRef(null)
-  const [selectedDate, setSelectedDate] = useState(null)
+  const [selectedId, setSelectedId] = useState(null)
 
   const located = useMemo(
     () => entries.filter((entry) => hasCoords(entry.location)),
@@ -27,9 +27,7 @@ export default function EntryMap({ entries, tagMap, onOpenEntry, onAdd }) {
       ),
     [entries],
   )
-  const selected = selectedDate
-    ? entries.find((entry) => entry.date === selectedDate) || null
-    : null
+  const selected = selectedId ? entries.find((entry) => entry.id === selectedId) || null : null
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return undefined
@@ -75,7 +73,7 @@ export default function EntryMap({ entries, tagMap, onOpenEntry, onAdd }) {
       )
       const emoji = tagMap.get(entry.tags?.[0])?.emoji || '📍'
       const marker = L.marker([gcjLat, gcjLng], { icon: badgeIcon(emoji) })
-      marker.on('click', () => setSelectedDate(entry.date))
+      marker.on('click', () => setSelectedId(entry.id))
       marker.addTo(layer)
       points.push([gcjLat, gcjLng])
     })
@@ -96,7 +94,7 @@ export default function EntryMap({ entries, tagMap, onOpenEntry, onAdd }) {
             我们的地图
           </h2>
           <p className="mt-1.5 text-sm font-medium text-muted">
-            已经标记了 {located.length} 个地点 · 点开标记看当天的记录
+            已经标记了 {located.length} 个地点
           </p>
         </div>
         <button
@@ -175,7 +173,7 @@ export default function EntryMap({ entries, tagMap, onOpenEntry, onAdd }) {
               </div>
               <button
                 type="button"
-                onClick={() => setSelectedDate(null)}
+                onClick={() => setSelectedId(null)}
                 aria-label="关闭"
                 className="-mr-1 -mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted transition hover:bg-line/50 hover:text-ink"
               >
@@ -194,7 +192,7 @@ export default function EntryMap({ entries, tagMap, onOpenEntry, onAdd }) {
       </div>
 
       <p className="mt-3 text-center text-xs text-muted">
-        底图来自高德 · 标记位置为添加记录时选的点
+        高德地图
       </p>
 
       {unlocated.length > 0 && (

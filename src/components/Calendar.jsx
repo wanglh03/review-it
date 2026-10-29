@@ -26,14 +26,16 @@ export default function Calendar({ entries, onJump, className = '' }) {
   const maxMonth = monthOf(latest && latest > today ? latest : today)
 
   const cells = useMemo(() => buildMonthCells(view.year, view.month), [view])
-  const monthEntryCount = useMemo(
-    () =>
-      entries.filter((entry) => {
-        const date = parseDate(entry.date)
-        return date.getFullYear() === view.year && date.getMonth() === view.month
-      }).length,
-    [entries, view],
-  )
+  const monthEntryCount = useMemo(() => {
+    const dates = new Set()
+    entries.forEach((entry) => {
+      const date = parseDate(entry.date)
+      if (date.getFullYear() === view.year && date.getMonth() === view.month) {
+        dates.add(entry.date)
+      }
+    })
+    return dates.size
+  }, [entries, view])
 
   const canPrev = compareMonth(view, minMonth) > 0
   const canNext = compareMonth(view, maxMonth) < 0
@@ -51,7 +53,6 @@ export default function Calendar({ entries, onJump, className = '' }) {
             <div className="text-base font-black leading-tight sm:text-lg">
               {view.year}年{view.month + 1}月
             </div>
-            <div className="text-xs font-medium text-muted">点击有记录的日子跳转</div>
           </div>
         </div>
         <div className="flex items-center gap-1.5">
@@ -115,21 +116,11 @@ export default function Calendar({ entries, onJump, className = '' }) {
         })}
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-2 border-t border-dashed border-line pt-3 text-xs font-medium text-muted">
-        <span>
-          {entries.length === 0
-            ? '还没有任何记录'
-            : monthEntryCount > 0
-              ? `本月 ${monthEntryCount} 天有记录`
-              : '本月还没有记录'}
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-coral" />
-          有记录
-          <span className="ml-1 h-2 w-2 rounded-full bg-[#d9cbc2]" />
-          无记录
-        </span>
-      </div>
+      {entries.length > 0 && (
+        <div className="mt-3 border-t border-dashed border-line pt-3 text-center text-xs font-medium text-muted">
+          {monthEntryCount > 0 ? `本月 ${monthEntryCount} 天` : '本月还没有记录'}
+        </div>
+      )}
     </section>
   )
 }

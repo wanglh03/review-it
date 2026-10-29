@@ -23,21 +23,32 @@ export default function EntryCard({ entry, tagMap, onEdit, onDelete, onImageClic
 
   const visibleImages = images.slice(0, 9)
   const hiddenCount = images.length - visibleImages.length
+  const time = entry.createdAt
+    ? new Date(entry.createdAt).toLocaleTimeString('zh-CN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      })
+    : ''
 
   return (
     <article
-      id={`entry-${entry.date}`}
+      id={`entry-${entry.id || entry.date}`}
       data-entry={entry.date}
       className="group relative grid scroll-mt-24 grid-cols-[56px_22px_minmax(0,1fr)] sm:scroll-mt-28 sm:grid-cols-[80px_26px_minmax(0,1fr)]"
     >
       <div className="pt-1 pr-1 text-right sm:pt-2">
-        <div className="text-xs font-black tracking-wide text-coral sm:text-[13px]">
+        <div className="text-[11px] font-bold tracking-wide text-muted/80 sm:text-xs">
+          {date.year}
+        </div>
+        <div className="mt-0.5 text-xs font-black tracking-wide text-coral sm:text-[13px]">
           {date.month}月
         </div>
         <div className="text-[26px] font-black leading-none tracking-tight text-ink sm:text-[34px]">
           {date.day}
         </div>
         <div className="mt-1 text-xs font-bold text-muted sm:text-[13px]">{date.weekday}</div>
+        {time && <div className="mt-0.5 text-[11px] font-medium text-muted/70">{time}</div>}
         {relative && (
           <div className="mt-1 inline-flex rounded-full bg-butter/70 px-2 py-0.5 text-xs font-bold text-[#9a6b1f]">
             {relative}
@@ -67,7 +78,7 @@ export default function EntryCard({ entry, tagMap, onEdit, onDelete, onImageClic
               <button
                 type="button"
                 onClick={() => onEdit(entry)}
-                aria-label="编辑这一天的记录"
+                aria-label="编辑这条记录"
                 title="编辑"
                 className="flex h-9 w-9 items-center justify-center rounded-full text-muted transition hover:bg-peach/60 hover:text-coral-deep"
               >
@@ -76,7 +87,7 @@ export default function EntryCard({ entry, tagMap, onEdit, onDelete, onImageClic
               <button
                 type="button"
                 onClick={() => onDelete(entry)}
-                aria-label="删除这一天的记录"
+                aria-label="删除这条记录"
                 title="删除"
                 className="flex h-9 w-9 items-center justify-center rounded-full text-muted transition hover:bg-rose/50 hover:text-[#b4453a]"
               >
@@ -130,7 +141,9 @@ export default function EntryCard({ entry, tagMap, onEdit, onDelete, onImageClic
                   onClick={() => onImageClick(entry, index)}
                   aria-label="查看大图"
                   className={`group/img relative overflow-hidden rounded-2xl bg-line/50 ${
-                    images.length === 1 ? 'aspect-[4/3] sm:aspect-[16/9]' : 'aspect-square'
+                    images.length === 1
+                      ? 'mx-auto aspect-[4/3] w-full sm:aspect-[16/10] sm:max-w-[520px]'
+                      : 'aspect-square'
                   }`}
                 >
                   <img

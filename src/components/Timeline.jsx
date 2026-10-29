@@ -32,7 +32,7 @@ export default function Timeline({ entries, tagMap, onEdit, onDelete, onImageCli
       <div className="space-y-7 sm:space-y-9">
         {entries.map((entry) => (
           <EntryCard
-            key={entry.date}
+            key={entry.id || entry.date}
             entry={entry}
             tagMap={tagMap}
             onEdit={onEdit}

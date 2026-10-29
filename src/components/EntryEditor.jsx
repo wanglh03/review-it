@@ -183,7 +183,7 @@ export default function EntryEditor({
 
     try {
       const result = isEdit
-        ? await api.updateEntry(draft.date, payload, token)
+        ? await api.updateEntry(entry.id, payload, token)
         : await api.createEntry(payload, token)
       onSaved(result.entry, isEdit)
     } catch (err) {
@@ -205,7 +205,7 @@ export default function EntryEditor({
     <Modal
       open={open}
       onClose={busy ? undefined : onClose}
-      title={isEdit ? '编辑这一天的记录' : '添加记录'}
+      title={isEdit ? '编辑这条记录' : '添加记录'}
       subtitle={dateLabel}
       icon={isEdit ? <Pencil size={20} /> : <NotebookPen size={20} />}
       maxWidth="max-w-2xl"
@@ -234,22 +234,20 @@ export default function EntryEditor({
       <div className="space-y-6">
         {/* 日期 */}
         <section>
-          <FieldLabel>日期</FieldLabel>
-          {isEdit ? (
-            <div className="rounded-2xl border border-line bg-cream px-4 py-3 text-base font-bold text-ink">
-              {dateLabel}
-              <span className="ml-2 text-xs font-medium text-muted">日期不可修改</span>
-            </div>
-          ) : (
-            <input
-              type="date"
-              value={draft.date}
-              min="2000-01-01"
-              max="2999-12-31"
-              onChange={(event) => patch({ date: event.target.value || todayStr() })}
-              className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-base font-semibold outline-none transition focus:border-coral focus:ring-4 focus:ring-coral/10"
-            />
-          )}
+          <FieldLabel>
+            日期
+            {isEdit && (
+              <span className="ml-1 font-normal text-muted/70">（可以改到别的日子）</span>
+            )}
+          </FieldLabel>
+          <input
+            type="date"
+            value={draft.date}
+            min="2000-01-01"
+            max="2999-12-31"
+            onChange={(event) => patch({ date: event.target.value || todayStr() })}
+            className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-base font-semibold outline-none transition focus:border-coral focus:ring-4 focus:ring-coral/10"
+          />
         </section>
 
         {/* 标题 */}

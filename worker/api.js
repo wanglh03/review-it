@@ -18,8 +18,14 @@ const JSON_HEADERS = {
 
 const IMAGE_KEY_RE = /^site\/images\/\d{8}\/[a-z0-9]{16}\.(jpg|png|webp|gif|avif)$/
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+const ENTRY_ID_RE = /^[A-Za-z0-9_-]{3,64}$/
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024
 const MAX_IMAGES = 12
+
+function compareEntries(a, b) {
+  if (a.date !== b.date) return a.date < b.date ? 1 : -1
+  return (a.createdAt || '') < (b.createdAt || '') ? 1 : -1
+}
 
 const IMAGE_TYPES = {
   'image/jpeg': 'jpg',
@@ -335,21 +341,22 @@ async function handleCreateEntry(request, env) {
 
   return withWriteLock(async () => {
     const data = await readData(env)
-    if (data.entries.some((entry) => entry.date === body?.date)) {
-      return fail('这一天已经有记录啦，可以直接编辑它', 409, 'CONFLICT', { date: body.date })
-    }
-
     const result = sanitizeEntry(body, data)
     if (result.error) return fail(result.error, 400, 'VALIDATION')
 
-    data.entries.push(result.entry)
-    data.entries.sort((a, b) => (a.date < b.date ? 1 : -1))
+    const entry = {
+      ...result.entry,
+      id: `e_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`,
+    }
+
+    data.entries.push(entry)
+    data.entries.sort(compareEntries)
     await writeData(env, data)
-    return json({ entry: result.entry }, 201)
+    return json({ entry }, 201)
   })
 }
 
-async function handleUpdateEntry(request, env, date) {
+async function handleUpdateEntry(request, env, id) {
   const claims = await requireScope(request, env, ['edit'])
   if (!claims) return fail('请先输入编辑密码', 401, 'AUTH_REQUIRED')
 
@@ -362,24 +369,28 @@ async function handleUpdateEntry(request, env, date) {
 
   return withWriteLock(async () => {
     const data = await readData(env)
-    const index = data.entries.findIndex((entry) => entry.date === date)
-    if (index === -1) return fail('没有找到这一天的记录', 404, 'NOT_FOUND')
-
-    const result = sanitizeEntry({ ...body, date }, data)
-    if (result.error) return fail(result.error, 400, 'VALIDATION')
+    const index = data.entries.findIndex((entry) => entry.id === id)
+    if (index === -1) return fail('没有找到这条记录', 404, 'NOT_FOUND')
 
     const previous = data.entries[index]
+    // 允许把记录改到别的日期；没传日期时保持原日期
+    const result = sanitizeEntry({ ...body, date: body?.date || previous.date }, data)
+    if (result.error) return fail(result.error, 400, 'VALIDATION')
+
     const next = {
       ...result.entry,
+      id: previous.id,
       createdAt: previous.createdAt || result.entry.createdAt,
       updatedAt: new Date().toISOString(),
     }
 
     const keptKeys = new Set(next.images.map((image) => image.key))
-    const removed = previous.images.filter((image) => !keptKeys.has(image.key)).map((image) => image.key)
+    const removed = previous.images
+      .filter((image) => !keptKeys.has(image.key))
+      .map((image) => image.key)
 
     data.entries[index] = next
-    data.entries.sort((a, b) => (a.date < b.date ? 1 : -1))
+    data.entries.sort(compareEntries)
     await writeData(env, data)
 
     if (removed.length) {
@@ -394,16 +405,16 @@ async function handleUpdateEntry(request, env, date) {
   })
 }
 
-async function handleDeleteEntry(request, env, date) {
+async function handleDeleteEntry(request, env, id) {
   const claims = await requireScope(request, env, ['edit'])
   if (!claims) return fail('请先输入编辑密码', 401, 'AUTH_REQUIRED')
 
   return withWriteLock(async () => {
     const data = await readData(env)
-    const entry = data.entries.find((item) => item.date === date)
-    if (!entry) return fail('没有找到这一天的记录', 404, 'NOT_FOUND')
+    const entry = data.entries.find((item) => item.id === id)
+    if (!entry) return fail('没有找到这条记录', 404, 'NOT_FOUND')
 
-    data.entries = data.entries.filter((item) => item.date !== date)
+    data.entries = data.entries.filter((item) => item.id !== id)
     await writeData(env, data)
 
     const keys = entry.images.map((image) => image.key).filter((key) => IMAGE_KEY_RE.test(key))
@@ -415,7 +426,7 @@ async function handleDeleteEntry(request, env, date) {
       }
     }
 
-    return json({ ok: true, date })
+    return json({ ok: true, id })
   })
 }
 
@@ -775,11 +786,11 @@ export async function handleApi(request, env, url) {
         if (request.method === 'POST') return handleCreateEntry(request, env)
         return fail('不支持的方法', 405, 'METHOD_NOT_ALLOWED')
       }
-      const date = rest[0]
-      if (!isValidDate(date)) return fail('日期格式不正确', 400, 'BAD_DATE')
+      const id = rest[0]
+      if (!ENTRY_ID_RE.test(id)) return fail('记录 ID 不正确', 400, 'BAD_ID')
       if (rest.length > 1) return fail('接口不存在', 404, 'NOT_FOUND')
-      if (request.method === 'PUT') return handleUpdateEntry(request, env, date)
-      if (request.method === 'DELETE') return handleDeleteEntry(request, env, date)
+      if (request.method === 'PUT') return handleUpdateEntry(request, env, id)
+      if (request.method === 'DELETE') return handleDeleteEntry(request, env, id)
       return fail('不支持的方法', 405, 'METHOD_NOT_ALLOWED')
     }
 

@@ -93,7 +93,7 @@ export default function AuthDialog({ open, scope, onClose, onVerify }) {
 
         <p className="flex items-start gap-1.5 text-xs leading-relaxed text-muted">
           <span className="mt-0.5 shrink-0">🔒</span>
-          码只会在你的设备上经过 PBKDF2 加密后再发送，服务端保存的是不可逆摘要，不会明文保存或下发。
+          经过 PBKDF2 加密。
         </p>
       </form>
     </Modal>
