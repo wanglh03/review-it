@@ -588,61 +588,114 @@ async function searchPhoton(query) {
   return (payload?.features || []).map(simplifyPhoton).filter(Boolean)
 }
 
-/* 高德 Web 服务（配置 AMAP_KEY 后优先使用，中文店名 / 门牌号覆盖最好） */
-function simplifyAmap(poi, fallbackName) {
-  const [lngRaw, latRaw] = String(poi.location || '').split(',')
+/* 高德 Web 服务：输入提示（全国）+ 当前地图城市优先，中文店名 / 门牌号覆盖最好 */
+function simplifyAmapTip(tip, fallbackName) {
+  const [lngRaw, latRaw] = String(tip.location || '').split(',')
   const gcjLng = Number(lngRaw)
   const gcjLat = Number(latRaw)
   if (!Number.isFinite(gcjLng) || !Number.isFinite(gcjLat)) return null
   const [lng, lat] = gcj02ToWgs84(gcjLng, gcjLat)
-  const address = [poi.pname, poi.cityname, poi.adname, poi.address]
-    .filter(Boolean)
-    .join(' ')
-    .trim()
+  const address = [tip.district, tip.address].filter(Boolean).join(' ').trim()
   return {
-    id: `a${poi.id || `${lat},${lng}`}`,
-    name: poi.name || fallbackName,
+    id: `a${tip.id || `${lat},${lng}`}`,
+    name: tip.name || fallbackName,
     address,
     lat,
     lng,
   }
 }
 
-async function searchAmapPlaces(query, key) {
-  const endpoint =
-    'https://restapi.amap.com/v3/place/text?' +
-    `key=${encodeURIComponent(key)}&keywords=${encodeURIComponent(query)}` +
-    '&offset=8&page=1&extensions=base&citylimit=false'
-  const response = await fetch(endpoint, { signal: AbortSignal.timeout(5000) })
-  if (!response.ok) throw new Error(`amap ${response.status}`)
+async function amapTips(key, query, cityCode) {
+  const params = [
+    `key=${encodeURIComponent(key)}`,
+    `keywords=${encodeURIComponent(query)}`,
+    'datatype=poi',
+    cityCode ? `city=${cityCode}` : '',
+    cityCode ? 'citylimit=true' : 'citylimit=false',
+  ]
+    .filter(Boolean)
+    .join('&')
+  const response = await fetch(`https://restapi.amap.com/v3/assistant/inputtips?${params}`, {
+    signal: AbortSignal.timeout(5000),
+  })
+  if (!response.ok) throw new Error(`amap tips ${response.status}`)
   const payload = await response.json()
-  if (payload.status !== '1') throw new Error(`amap ${payload.info || 'error'}`)
-  return (Array.isArray(payload.pois) ? payload.pois : [])
-    .map((poi) => simplifyAmap(poi, query))
+  if (payload.status !== '1') throw new Error(`amap tips ${payload.info || 'error'}`)
+  return (Array.isArray(payload.tips) ? payload.tips : [])
+    .map((tip) => simplifyAmapTip(tip, query))
     .filter(Boolean)
 }
 
-async function geocodeAmap(query, key) {
+async function amapAdcode(key, near) {
+  if (!near) return ''
+  const [lng, lat] = near.split(',')
+  if (!Number.isFinite(Number(lng)) || !Number.isFinite(Number(lat))) return ''
   const endpoint =
-    'https://restapi.amap.com/v3/geocode/geo?' +
-    `key=${encodeURIComponent(key)}&address=${encodeURIComponent(query)}&batch=false`
+    'https://restapi.amap.com/v3/geocode/regeo?' +
+    `key=${encodeURIComponent(key)}&location=${lng},${lat}`
   const response = await fetch(endpoint, { signal: AbortSignal.timeout(5000) })
-  if (!response.ok) throw new Error(`amap geocode ${response.status}`)
+  if (!response.ok) return ''
   const payload = await response.json()
-  if (payload.status !== '1') throw new Error(`amap geocode ${payload.info || 'error'}`)
-  return (Array.isArray(payload.geocodes) ? payload.geocodes : [])
-    .map((geo) => simplifyAmap({ ...geo, name: query }, query))
-    .filter(Boolean)
+  if (payload.status !== '1') return ''
+  return payload.regeocode?.addressComponent?.adcode || ''
+}
+
+async function searchAmapTips(query, key, near) {
+  const cityCode = await amapAdcode(key, near)
+  const [localResult, nationalResult] = await Promise.allSettled([
+    cityCode ? amapTips(key, query, cityCode) : Promise.resolve([]),
+    amapTips(key, query, ''),
+  ])
+
+  if (localResult.status === 'rejected' && nationalResult.status === 'rejected') {
+    throw localResult.reason || nationalResult.reason
+  }
+
+  const local = localResult.status === 'fulfilled' ? localResult.value : []
+  const national = nationalResult.status === 'fulfilled' ? nationalResult.value : []
+
+  const merged = []
+  const seen = new Set()
+  for (const item of [...local, ...national]) {
+    const marker = `${item.name}|${item.lat.toFixed(5)}|${item.lng.toFixed(5)}`
+    if (seen.has(marker)) continue
+    seen.add(marker)
+    merged.push(item)
+  }
+
+  // 高德的“输入提示”会带出一些模糊匹配（比如搜一兰拉面混进味千），
+  // 这里按“名称/地址是否真的包含关键词”做一次轻量排序，把明显不相关的压下去。
+  const normalize = (value) => String(value || '').toLowerCase().replace(/\s+/g, '')
+  const keyword = normalize(query)
+  const prefix = keyword.slice(0, 2)
+  const scored = merged.map((item, index) => {
+    const name = normalize(item.name)
+    const address = normalize(item.address)
+    let score = 2
+    if (name.includes(keyword)) score = 0
+    else if (name.includes(prefix) || address.includes(keyword)) score = 1
+    return { item, score, index }
+  })
+  const relevant = scored.filter((entry) => entry.score < 2)
+  const picked = (relevant.length ? relevant : scored)
+    .sort((a, b) => a.score - b.score || a.index - b.index)
+    .slice(0, 8)
+    .map((entry) => entry.item)
+
+  return picked
 }
 
 async function handleGeoSearch(request, env, url) {
   const query = String(url.searchParams.get('q') || '').trim().slice(0, 60)
   if (query.length < 2) return fail('至少输入两个字再搜索', 400, 'VALIDATION')
 
+  const nearRaw = String(url.searchParams.get('near') || '').trim()
+  const near = /^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(nearRaw) ? nearRaw : ''
+
   const ip = clientIp(request)
   if (!geoAllowed(ip)) return fail('搜索太频繁了，休息一会儿再试', 429, 'RATE_LIMITED')
 
-  const cacheKey = query.toLowerCase()
+  const cacheKey = `${query.toLowerCase()}|${near}`
   const cached = geoCacheGet(cacheKey)
   if (cached) return json({ results: cached })
 
@@ -650,23 +703,14 @@ async function handleGeoSearch(request, env, url) {
   let source = 'none'
   let responded = false
 
-  // 1) 配了高德 Key 就优先用高德（中文店名 / 门牌号覆盖最好）
+  // 1) 配了高德 Key 就优先用高德（当前地图城市优先，再全国）
   if (env.AMAP_KEY) {
     try {
-      results = await searchAmapPlaces(query, env.AMAP_KEY)
+      results = await searchAmapTips(query, env.AMAP_KEY, near)
       responded = true
       if (results.length) source = 'amap'
     } catch (error) {
-      console.error('amap place search failed', error)
-    }
-    if (!results.length) {
-      try {
-        results = await geocodeAmap(query, env.AMAP_KEY)
-        responded = true
-        if (results.length) source = 'amap'
-      } catch (error) {
-        console.error('amap geocode failed', error)
-      }
+      console.error('amap tips search failed', error)
     }
   }
 

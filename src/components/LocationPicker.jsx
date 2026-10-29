@@ -101,7 +101,9 @@ export default function LocationPicker({ value, onChange, onPick }) {
     const controller = new AbortController()
     const timeout = window.setTimeout(() => controller.abort(), 12000)
     try {
-      const data = await api.geoSearch(keyword, controller.signal)
+      const center = mapRef.current?.getCenter()
+      const near = center ? `${center.lng.toFixed(6)},${center.lat.toFixed(6)}` : ''
+      const data = await api.geoSearch(keyword, { near, signal: controller.signal })
       const list = data.results || []
       setResults(list)
       if (!list.length) setSearchError('没有找到匹配的地点，换个关键词试试，或直接点地图选点')
