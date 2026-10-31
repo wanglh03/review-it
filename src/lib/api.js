@@ -32,6 +32,7 @@ async function request(path, { method = 'GET', body, token, formData, signal } =
 export const api = {
   list: () => request('/posts'),
   health: () => request('/health'),
+  authStatus: () => request('/auth/status'),
 
   /** 先取盐，在浏览器里做 PBKDF2，再把 proof 交给服务端校验 */
   auth: async (scope, secret) => {

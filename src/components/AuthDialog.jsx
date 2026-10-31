@@ -93,7 +93,7 @@ export default function AuthDialog({ open, scope, onClose, onVerify }) {
 
         <p className="flex items-start gap-1.5 text-xs leading-relaxed text-muted">
           <span className="mt-0.5 shrink-0">🔒</span>
-          经过 PBKDF2 加密。
+          经过 PBKDF2 加密。验证成功后 2 小时内不用再输入。
         </p>
       </form>
     </Modal>

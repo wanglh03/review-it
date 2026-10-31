@@ -23,13 +23,6 @@ export default function EntryCard({ entry, tagMap, onEdit, onDelete, onImageClic
 
   const visibleImages = images.slice(0, 9)
   const hiddenCount = images.length - visibleImages.length
-  const time = entry.createdAt
-    ? new Date(entry.createdAt).toLocaleTimeString('zh-CN', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      })
-    : ''
 
   return (
     <article
@@ -48,7 +41,6 @@ export default function EntryCard({ entry, tagMap, onEdit, onDelete, onImageClic
           {date.day}
         </div>
         <div className="mt-1 text-xs font-bold text-muted sm:text-[13px]">{date.weekday}</div>
-        {time && <div className="mt-0.5 text-[11px] font-medium text-muted/70">{time}</div>}
         {relative && (
           <div className="mt-1 inline-flex rounded-full bg-butter/70 px-2 py-0.5 text-xs font-bold text-[#9a6b1f]">
             {relative}

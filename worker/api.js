@@ -76,12 +76,32 @@ async function readJson(request) {
   }
 }
 
+function readCookie(request, name) {
+  const header = request.headers.get('cookie') || ''
+  for (const part of header.split(';')) {
+    const index = part.indexOf('=')
+    if (index === -1) continue
+    if (part.slice(0, index).trim() === name) return part.slice(index + 1).trim()
+  }
+  return ''
+}
+
 async function requireScope(request, env, scopes) {
   const header = request.headers.get('authorization') || ''
-  if (!header.startsWith('Bearer ')) return null
-  const claims = await verifyToken(header.slice(7).trim(), env.SESSION_SECRET)
-  if (!claims || !scopes.includes(claims.scope)) return null
-  return claims
+  if (header.startsWith('Bearer ')) {
+    const claims = await verifyToken(header.slice(7).trim(), env.SESSION_SECRET)
+    if (claims && scopes.includes(claims.scope)) return claims
+  }
+
+  // 浏览器端用 HttpOnly Cookie 记住解锁状态，避免反复输入 PIN
+  for (const scope of scopes) {
+    const token = readCookie(request, `review_${scope}`)
+    if (!token) continue
+    const claims = await verifyToken(token, env.SESSION_SECRET)
+    if (claims && claims.scope === scope) return claims
+  }
+
+  return null
 }
 
 function cleanText(value, maxLength) {
@@ -219,6 +239,21 @@ async function handleAuthSalt(env, url) {
   return json({ salt: `${env.AUTH_SALT}:${scope}`, scope })
 }
 
+async function hasCookieScope(request, env, scope) {
+  const token = readCookie(request, `review_${scope}`)
+  if (!token) return false
+  const claims = await verifyToken(token, env.SESSION_SECRET)
+  return Boolean(claims && claims.scope === scope)
+}
+
+async function handleAuthStatus(request, env) {
+  if (!isConfigured(env)) return configurationError()
+  return json({
+    add: await hasCookieScope(request, env, 'add'),
+    edit: await hasCookieScope(request, env, 'edit'),
+  })
+}
+
 async function handleAuth(request, env) {
   if (!isConfigured(env)) return configurationError()
 
@@ -254,7 +289,11 @@ async function handleAuth(request, env) {
 
   clearFailures(limitKey)
   const issued = await issueToken(env.SESSION_SECRET, scope)
-  return json(issued)
+  const secure = new URL(request.url).protocol === 'https:'
+  const cookie =
+    `review_${scope}=${issued.token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=7200` +
+    (secure ? '; Secure' : '')
+  return json(issued, 200, { 'set-cookie': cookie })
 }
 
 async function handleUpload(request, env) {
@@ -798,6 +837,7 @@ export async function handleApi(request, env, url) {
       if (rest.length === 0 && request.method === 'POST') return handleAuth(request, env)
       if (rest.length === 0 && request.method === 'GET') return handleAuthSalt(env, url)
       if (rest[0] === 'salt' && request.method === 'GET') return handleAuthSalt(env, url)
+      if (rest[0] === 'status' && request.method === 'GET') return handleAuthStatus(request, env)
       return fail('接口不存在', 404, 'NOT_FOUND')
     }
 

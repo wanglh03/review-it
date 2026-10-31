@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowUp, CloudOff, Loader2, RefreshCw } from 'lucide-react'
 import { api } from './lib/api'
-import { clearEditSession, loadEditSession, saveEditSession } from './lib/auth'
 import { dateFromHash, dateParts, hashOf } from './lib/date'
 import Header from './components/Header'
 import Timeline from './components/Timeline'
@@ -28,8 +27,8 @@ export default function App() {
   const [activeTag, setActiveTag] = useState(null)
   const [activeDate, setActiveDate] = useState(null)
 
-  const [addToken, setAddToken] = useState(null)
-  const [editSession, setEditSession] = useState(() => loadEditSession())
+  const [tokens, setTokens] = useState({ add: null, edit: null })
+  const [unlocked, setUnlocked] = useState({ add: false, edit: false })
 
   const [authState, setAuthState] = useState({ open: false, scope: 'add' })
   const [editorState, setEditorState] = useState({
@@ -51,8 +50,6 @@ export default function App() {
   const suppressHash = useRef(false)
   const releaseTimer = useRef(0)
   const toastTimer = useRef(null)
-
-  const editToken = editSession?.token || null
 
   const notify = useCallback((message, type = 'success') => {
     setToast({ message, type })
@@ -197,41 +194,50 @@ export default function App() {
   }, [])
 
   /* ---------------- 鉴权 ---------------- */
+  // 服务端把解锁状态写进 HttpOnly Cookie，刷新页面后也能复用
+  useEffect(() => {
+    let active = true
+    api
+      .authStatus()
+      .then((result) => {
+        if (!active) return
+        setUnlocked({ add: Boolean(result.add), edit: Boolean(result.edit) })
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [])
+
   const ensureScope = useCallback(
     (scope, action) => {
-      const token = scope === 'add' ? addToken : editToken
-      if (token) {
-        action(token)
+      if (unlocked[scope] || tokens[scope]) {
+        action()
         return
       }
       pendingAction.current = action
       setAuthState({ open: true, scope })
     },
-    [addToken, editToken],
+    [unlocked, tokens],
   )
 
   const handleVerify = async (secret) => {
     const scope = authState.scope
     const result = await api.auth(scope, secret)
-    if (scope === 'add') {
-      setAddToken(result.token)
-    } else {
-      const session = { token: result.token, expiresAt: result.expiresAt }
-      setEditSession(session)
-      saveEditSession(session)
-    }
+    setTokens((current) => ({ ...current, [scope]: result.token }))
+    setUnlocked((current) => ({ ...current, [scope]: true }))
     setAuthState({ open: false, scope })
     notify(scope === 'add' ? 'PIN 验证通过，可以添加记录啦' : '密码验证通过')
 
     const action = pendingAction.current
     pendingAction.current = null
-    if (action) window.setTimeout(() => action(result.token), 60)
+    if (action) window.setTimeout(() => action(), 60)
   }
 
   const requestEditAuth = useCallback(
     (action) => {
-      setEditSession(null)
-      clearEditSession()
+      setTokens((current) => ({ ...current, edit: null }))
+      setUnlocked((current) => ({ ...current, edit: false }))
       ensureScope('edit', action)
     },
     [ensureScope],
@@ -268,7 +274,7 @@ export default function App() {
     if (!deleteTarget || deleting) return
     setDeleting(true)
     try {
-      await api.deleteEntry(deleteTarget.id, editToken)
+      await api.deleteEntry(deleteTarget.id, tokens.edit)
       setData((current) =>
         current
           ? {
@@ -475,7 +481,7 @@ export default function App() {
               : editorState.date
           }
           tags={tags}
-          token={editorState.mode === 'edit' ? editToken : addToken}
+          token={editorState.mode === 'edit' ? tokens.edit : tokens.add}
           onClose={() => setEditorState({ open: false, mode: 'create', entry: null, date: null })}
           onSaved={handleSaved}
           onRequestEditAuth={() => requestEditAuth(() => {})}
@@ -499,7 +505,7 @@ export default function App() {
       <TagManager
         open={tagManagerOpen}
         tags={tags}
-        token={editToken}
+        token={tokens.edit}
         onClose={() => setTagManagerOpen(false)}
         onSaved={handleTagsSaved}
       />

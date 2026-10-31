@@ -46,9 +46,9 @@ PIN 码与编辑密码都不以明文经网络传输或存储：
 
 1. 前端用 `PBKDF2-SHA256`（210000 次迭代 + 服务端下发的盐）派生 `proof`，密码本身不离开设备；
 2. 服务端只保存 `HMAC-SHA256(AUTH_PEPPER, proof)` 摘要，恒定时间比较；
-3. 校验通过后签发 2 小时有效的 HMAC 令牌（`add` / `edit` 两种 scope），放在 `Authorization: Bearer` 头里，天然免疫 CSRF；
+3. 校验通过后签发 2 小时有效的 HMAC 令牌（`add` / `edit` 两种 scope），同时写入 **HttpOnly + Secure + SameSite=Lax** 的 Cookie；浏览器刷新后通过 `/api/auth/status` 恢复解锁状态，2 小时内不需要重复输入 PIN；
 4. 登录失败按 IP + scope 限流（10 分钟 6 次）并附加固定延迟；
-5. 上传校验文件头魔数与声明类型，图片 key 走白名单格式校验。
+5. 上传校验文件头魔数与声明类型，图片 key 走白名单格式校验；Cookie 带 SameSite=Lax，写接口不受跨站请求影响。
 
 ## 目录结构
 
@@ -166,7 +166,8 @@ R2 只有两类对象：
 | --- | --- | --- |
 | GET | `/api/posts` | 拉取全部记录与标签 |
 | GET | `/api/auth/salt?scope=add\|edit` | 取前端派生用的盐 |
-| POST | `/api/auth` | 提交 proof，换取令牌 |
+| POST | `/api/auth` | 提交 proof，换取令牌并写入解锁 Cookie |
+| GET | `/api/auth/status` | 查询当前 Cookie 的 add / edit 解锁状态 |
 | POST | `/api/upload` | 上传图片（需 add / edit 令牌） |
 | POST | `/api/posts` | 新建记录（需 add 令牌） |
 | PUT | `/api/posts/:id` | 修改这条记录（需 edit 令牌） |

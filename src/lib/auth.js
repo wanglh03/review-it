@@ -31,34 +31,3 @@ export async function deriveProof(secret, salt) {
   for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i])
   return btoa(binary)
 }
-
-const SESSION_KEY = 'review-it:edit-session'
-
-export function loadEditSession() {
-  try {
-    const raw = sessionStorage.getItem(SESSION_KEY)
-    if (!raw) return null
-    const session = JSON.parse(raw)
-    if (!session?.token || !session?.expiresAt) return null
-    if (session.expiresAt < Date.now() + 60_000) return null
-    return session
-  } catch {
-    return null
-  }
-}
-
-export function saveEditSession(session) {
-  try {
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session))
-  } catch {
-    /* 隐私模式下可能不可用，忽略 */
-  }
-}
-
-export function clearEditSession() {
-  try {
-    sessionStorage.removeItem(SESSION_KEY)
-  } catch {
-    /* ignore */
-  }
-}

@@ -5,11 +5,12 @@ import { imageUrl } from '../lib/image'
 import { EmptyState } from './ui'
 
 export default function Album({ entries, onOpen, onAdd }) {
+  // 每条测评只出现一次，用第一张图片做封面
   const photos = useMemo(
     () =>
-      entries.flatMap((entry) =>
-        (entry.images || []).map((image, index) => ({ entry, image, index })),
-      ),
+      entries
+        .filter((entry) => entry.images?.length)
+        .map((entry) => ({ entry, image: entry.images[0], index: 0 })),
     [entries],
   )
 
@@ -26,7 +27,7 @@ export default function Album({ entries, onOpen, onAdd }) {
             相册
           </h2>
           <p className="mt-1.5 text-sm font-medium text-muted sm:text-[15px]">
-            共 {totalPhotos} 张照片
+            共 {totalPhotos} 篇测评 · 每条展示第一张照片
           </p>
         </div>
         <span className="hidden shrink-0 items-center gap-1.5 rounded-full bg-white/80 px-3.5 py-2 text-xs font-bold text-muted shadow-sm sm:flex">
@@ -61,7 +62,7 @@ export default function Album({ entries, onOpen, onAdd }) {
               photo.image.w && photo.image.h ? `${photo.image.w} / ${photo.image.h}` : '4 / 3'
             return (
               <button
-                key={photo.image.key}
+                key={`${photo.entry.id || photo.entry.date}-${photo.image.key}`}
                 type="button"
                 onClick={() => onOpen(photo.entry, photo.index)}
                 className="group relative mb-3 block w-full break-inside-avoid overflow-hidden rounded-2xl border border-line/60 bg-white text-left shadow-sm transition hover:shadow-soft sm:mb-4"

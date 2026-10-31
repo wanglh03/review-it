@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Loader2, Plus, Settings2, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { GripVertical, Loader2, Plus, Settings2, Trash2 } from 'lucide-react'
 import { api } from '../lib/api'
 import { Modal } from './ui'
 
@@ -7,6 +7,9 @@ export default function TagManager({ open, tags, token, onClose, onSaved }) {
   const [draft, setDraft] = useState([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [dragIndex, setDragIndex] = useState(null)
+  const dragRef = useRef({ index: null })
+  const rowRefs = useRef([])
 
   useEffect(() => {
     if (!open) return
@@ -19,6 +22,46 @@ export default function TagManager({ open, tags, token, onClose, onSaved }) {
     setDraft((list) => list.map((tag, i) => (i === index ? { ...tag, ...patch } : tag)))
   const remove = (index) => setDraft((list) => list.filter((_, i) => i !== index))
   const add = () => setDraft((list) => [...list, { id: '', name: '', emoji: '🍽️' }])
+
+  /** 鼠标 / 手指按住左侧手柄上下滑动排序 */
+  const startDrag = (event, index) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return
+    event.preventDefault()
+    dragRef.current.index = index
+    setDragIndex(index)
+
+    const onMove = (moveEvent) => {
+      const from = dragRef.current.index
+      if (from === null) return
+      let target = from
+      rowRefs.current.forEach((node, rowIndex) => {
+        if (!node) return
+        const rect = node.getBoundingClientRect()
+        if (moveEvent.clientY >= rect.top && moveEvent.clientY <= rect.bottom) target = rowIndex
+      })
+      if (target === from) return
+      setDraft((list) => {
+        const next = [...list]
+        const [item] = next.splice(from, 1)
+        next.splice(target, 0, item)
+        return next
+      })
+      dragRef.current.index = target
+      setDragIndex(target)
+    }
+
+    const stop = () => {
+      dragRef.current.index = null
+      setDragIndex(null)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', stop)
+      window.removeEventListener('pointercancel', stop)
+    }
+
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', stop)
+    window.addEventListener('pointercancel', stop)
+  }
 
   const save = async () => {
     if (busy) return
@@ -55,7 +98,7 @@ export default function TagManager({ open, tags, token, onClose, onSaved }) {
       open={open}
       onClose={busy ? undefined : onClose}
       title="维护标签"
-      subtitle="改名、换 emoji、增删标签都可以"
+      subtitle="拖动左侧手柄可以调整顺序，也可以改名、换 emoji、增删标签"
       icon={<Settings2 size={20} />}
       maxWidth="max-w-md"
       footer={
@@ -84,14 +127,30 @@ export default function TagManager({ open, tags, token, onClose, onSaved }) {
         {draft.map((tag, index) => (
           <div
             key={tag.id || `new-${index}`}
-            className="flex items-center gap-2 rounded-2xl border border-line bg-white p-2"
+            ref={(node) => {
+              rowRefs.current[index] = node
+            }}
+            className={`flex items-center gap-1.5 rounded-2xl border bg-white p-2 transition ${
+              dragIndex === index
+                ? 'border-coral shadow-soft ring-2 ring-coral/10'
+                : 'border-line'
+            }`}
           >
+            <button
+              type="button"
+              onPointerDown={(event) => startDrag(event, index)}
+              aria-label="拖动排序"
+              title="按住拖动排序"
+              className="flex h-10 w-7 shrink-0 touch-none items-center justify-center rounded-lg text-muted/60 transition hover:bg-cream hover:text-ink active:cursor-grabbing"
+            >
+              <GripVertical size={17} />
+            </button>
             <input
               value={tag.emoji}
               onChange={(event) => update(index, { emoji: event.target.value })}
               maxLength={4}
               aria-label="标签 emoji"
-              className="h-10 w-12 rounded-xl bg-cream text-center text-lg outline-none transition focus:ring-2 focus:ring-coral/25"
+              className="h-10 w-12 shrink-0 rounded-xl bg-cream text-center text-lg outline-none transition focus:ring-2 focus:ring-coral/25"
             />
             <input
               value={tag.name}
